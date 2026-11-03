@@ -1,0 +1,1416 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>블록 월드 수학 어드벤처</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Jua&display=swap" rel="stylesheet">
+<style>
+:root{
+  color-scheme: light;
+  --sky1:#58b4ef; --sky2:#c4e9ff;
+  --plate:#55c13a; --plate-dark:#3c9a27; --wood:#8a5a33; --wood-dark:#5e3b1f;
+  --ink:#14212e;
+  --panel:#2c9fd6; --panel-deep:#1b6e9c; --well:#13506f;
+  --surface:#eef8ff; --surface-2:#d7ecfa;
+  --text:#14212e; --text-soft:#4b5d6e;
+  --hud:rgba(22,32,44,.82); --hud-line:rgba(255,255,255,.55);
+  --gold:#ffc83a; --green:#55cf46; --red:#ee4a3c; --purple:#8c5cf0; --orange:#f5a524; --blue:#3a8cf0; --pink:#dc4fc6; --teal:#22b8b0;
+  --ok:#2fb344; --ng:#e23d30;
+  --font:'Jua','Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',system-ui,sans-serif;
+  --display:'Black Han Sans','Jua','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --sky1:#0b1834; --sky2:#22406f;
+    --plate:#2f7d22; --plate-dark:#215c17; --wood:#6b4426; --wood-dark:#432914;
+    --panel:#1f74a3; --panel-deep:#134f73; --well:#0b3249;
+    --surface:#16293b; --surface-2:#1f3850;
+    --text:#ecf5ff; --text-soft:#a8bccf;
+    --hud:rgba(6,12,20,.86); --hud-line:rgba(255,255,255,.4);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --sky1:#0b1834; --sky2:#22406f;
+  --plate:#2f7d22; --plate-dark:#215c17; --wood:#6b4426; --wood-dark:#432914;
+  --panel:#1f74a3; --panel-deep:#134f73; --well:#0b3249;
+  --surface:#16293b; --surface-2:#1f3850;
+  --text:#ecf5ff; --text-soft:#a8bccf;
+  --hud:rgba(6,12,20,.86); --hud-line:rgba(255,255,255,.4);
+}
+*,*::before,*::after{box-sizing:inherit}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+body{
+  margin:0;min-height:100%;display:flex;flex-direction:column;
+  font-family:var(--font);color:var(--text);
+  background:linear-gradient(180deg,var(--sky1) 0%,var(--sky2) 75%) fixed, var(--sky2);
+  -webkit-tap-highlight-color:transparent;
+}
+button,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+[hidden]{display:none !important}
+:focus-visible{outline:4px solid var(--gold);outline-offset:3px}
+
+/* ---------- 외곽선 글자 (게임 UI 텍스트) ---------- */
+.ot{
+  color:#fff;font-family:var(--display);font-weight:400;letter-spacing:.01em;
+  text-shadow:
+    -2px -2px 0 var(--ink), 2px -2px 0 var(--ink), -2px 2px 0 var(--ink), 2px 2px 0 var(--ink),
+    0 -2px 0 var(--ink), 0 2px 0 var(--ink), -2px 0 0 var(--ink), 2px 0 0 var(--ink),
+    0 4px 0 var(--ink);
+}
+.ot-sm{
+  color:#fff;
+  text-shadow:-1.5px -1.5px 0 var(--ink),1.5px -1.5px 0 var(--ink),-1.5px 1.5px 0 var(--ink),1.5px 1.5px 0 var(--ink),0 2.5px 0 var(--ink);
+}
+
+/* ---------- 블록 버튼 ---------- */
+.btn{
+  --c:var(--blue);
+  position:relative;display:inline-flex;align-items:center;justify-content:center;gap:.4em;
+  min-height:48px;padding:.5em 1.1em;
+  background:linear-gradient(115deg,transparent 52%,rgba(255,255,255,.2) 52% 66%,transparent 66%),var(--c);
+  border:3px solid var(--ink);border-radius:10px;
+  box-shadow:inset 0 3px 0 rgba(255,255,255,.4), inset 0 -5px 0 rgba(0,0,0,.22), 0 4px 0 var(--ink);
+  font-family:var(--display);font-size:1.15rem;color:#fff;
+  text-shadow:-1.5px -1.5px 0 var(--ink),1.5px -1.5px 0 var(--ink),-1.5px 1.5px 0 var(--ink),1.5px 1.5px 0 var(--ink),0 2.5px 0 var(--ink);
+  transition:transform .08s, box-shadow .08s, filter .15s;
+  user-select:none;
+}
+.btn:hover{filter:brightness(1.07)}
+.btn:active{transform:translateY(3px);box-shadow:inset 0 3px 0 rgba(255,255,255,.4), inset 0 -3px 0 rgba(0,0,0,.22), 0 1px 0 var(--ink)}
+.btn:disabled{filter:grayscale(.7) brightness(.85);cursor:not-allowed}
+.btn-green{--c:var(--green)} .btn-red{--c:var(--red)} .btn-gold{--c:var(--gold)} .btn-purple{--c:var(--purple)} .btn-blue{--c:var(--blue)} .btn-orange{--c:var(--orange)}
+.btn-sm{min-height:38px;font-size:.95rem;padding:.3em .8em;border-radius:8px}
+.btn-lg{min-height:62px;font-size:1.5rem;width:100%}
+.btn-x{width:46px;height:46px;min-height:0;padding:0;font-size:1.4rem}
+.linkish{background:none;border:0;padding:6px;color:var(--text-soft);text-decoration:underline;text-underline-offset:3px;font-size:.95rem}
+.linkish:hover{color:var(--text)}
+
+/* ---------- 패널 ---------- */
+.panel{
+  background:var(--panel);border:4px solid var(--ink);border-radius:16px;
+  box-shadow:inset 0 4px 0 rgba(255,255,255,.22), inset 0 -6px 0 rgba(0,0,0,.18), 0 6px 0 var(--ink);
+  padding:18px;
+}
+.well{background:var(--well);border:3px solid var(--ink);border-radius:12px;box-shadow:inset 0 4px 0 rgba(0,0,0,.25);padding:14px}
+.sheet{background:var(--surface);color:var(--text);border:3px solid var(--ink);border-radius:12px;padding:16px;box-shadow:inset 0 -4px 0 rgba(0,0,0,.08)}
+.slot{background:var(--hud);border:3px solid var(--hud-line);border-radius:10px;color:#fff}
+
+/* ---------- 배경 장식: 울타리 + 스터드 바닥 ---------- */
+.ground{flex:none;margin-top:28px}
+.fence{
+  height:46px;
+  background:
+    repeating-linear-gradient(90deg,var(--wood) 0 16px,transparent 16px 132px),
+    linear-gradient(180deg,transparent 24%,var(--wood) 24% 40%,transparent 40% 60%,var(--wood) 60% 76%,transparent 76%);
+  border-bottom:0;
+}
+.plate{
+  height:84px;background-color:var(--plate);border-top:4px solid var(--plate-dark);
+  background-image:radial-gradient(circle at 50% 42%,rgba(255,255,255,.3) 0 5px,rgba(0,0,0,.16) 6px 7px,transparent 8px);
+  background-size:24px 24px;
+}
+
+/* ---------- 레이아웃 ---------- */
+main{flex:1;width:100%;max-width:980px;margin:0 auto;padding:18px 16px 0}
+
+/* HUD */
+.hud{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.hud-me{display:flex;align-items:center;gap:12px;min-width:0}
+.avatar-slot{width:62px;height:62px;display:grid;place-items:center;font-size:2.1rem;flex:none}
+.hud-name{font-size:1.35rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:46vw}
+.hud-sub{font-size:.85rem;color:#fff;opacity:.95}
+.hud-right{display:flex;align-items:center;gap:10px}
+.pill{
+  display:inline-flex;align-items:center;gap:8px;padding:6px 14px 6px 8px;min-height:46px;
+  background:linear-gradient(180deg,#46577a,#33415e);border:3px solid var(--ink);border-radius:10px;
+  box-shadow:inset 0 3px 0 rgba(255,255,255,.18),0 4px 0 var(--ink);
+  font-family:var(--display);font-size:1.25rem;
+}
+.coin{
+  width:26px;height:26px;border-radius:50%;flex:none;display:inline-grid;place-items:center;
+  background:radial-gradient(circle at 35% 30%,#fff2a8 0 18%,#ffcf3a 40%,#e39b06 100%);
+  border:2.5px solid var(--ink);box-shadow:inset 0 0 0 3px rgba(255,255,255,.25);
+  font-family:var(--display);font-size:.8rem;color:#a86a00;text-shadow:none;
+}
+.coin::after{content:"B"}
+.bump{animation:bump .35s ease}
+@keyframes bump{40%{transform:scale(1.18)}}
+
+/* 탭 */
+.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+.tab{font-size:1.2rem;min-height:56px}
+.tab[aria-selected="false"]{filter:saturate(.7) brightness(.9)}
+.tab[aria-selected="true"]{transform:translateY(-3px);box-shadow:inset 0 0 0 3px rgba(255,255,255,.75), inset 0 -6px 0 rgba(0,0,0,.2), 0 7px 0 var(--ink)}
+.tab .ico{font-size:1.25em;text-shadow:none}
+
+.section-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.section-head h2{margin:0;font-size:1.75rem}
+.section-head p{margin:4px 0 0;color:#fff;font-size:1rem}
+
+/* ---------- 카드 (상점 카드 스타일) ---------- */
+.card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:18px 14px}
+.card{
+  --c:var(--orange);
+  position:relative;display:flex;flex-direction:column;align-items:stretch;gap:8px;text-align:center;
+  background:var(--c);border:3px solid var(--ink);border-radius:12px;padding:9px 9px 11px;
+  box-shadow:inset 0 3px 0 rgba(255,255,255,.35), inset 0 -6px 0 rgba(0,0,0,.2), 0 5px 0 var(--ink);
+  font-family:var(--font);
+}
+button.card{transition:transform .1s}
+button.card:hover{transform:translateY(-3px)}
+button.card:active{transform:translateY(2px)}
+.card-art{
+  aspect-ratio:4/3;display:grid;place-items:center;border:3px solid var(--ink);border-radius:7px;
+  background:
+    radial-gradient(circle at 50% 58%,rgba(255,255,255,.5),transparent 58%),
+    repeating-conic-gradient(from 0deg at 50% 58%,rgba(255,255,255,.2) 0 9deg,transparent 9deg 18deg),
+    var(--c);
+  font-family:var(--display);font-size:2.3rem;color:#fff;overflow:hidden;
+}
+.card-art.emoji{font-size:3.1rem;text-shadow:0 4px 0 rgba(0,0,0,.25)}
+.card-art.expr-art{white-space:nowrap;font-size:clamp(1.35rem,4.2vw,2.1rem);letter-spacing:-.01em;padding:0 4px}
+.card-meta.hot{font-family:var(--display);font-size:.95rem;color:var(--gold);text-shadow:-1.5px -1.5px 0 var(--ink),1.5px -1.5px 0 var(--ink),-1.5px 1.5px 0 var(--ink),1.5px 1.5px 0 var(--ink),0 2.5px 0 var(--ink)}
+.wp{text-align:left;font-size:clamp(1.08rem,3.6vw,1.3rem);line-height:1.85;max-width:34em;margin:0 auto;word-break:keep-all}
+.wp .frac{font-size:.82em;margin:0 .1em}
+.wp b{font-family:var(--display);font-weight:400;color:var(--purple)}
+.unit{flex:none;display:grid;place-items:center;min-width:64px;padding:0 12px;font-family:var(--display);font-size:1.4rem}
+.ex-list{display:flex;flex-direction:column;gap:10px}
+.ex-item{border:2.5px solid var(--ink);border-radius:10px;padding:10px 12px;background:var(--surface)}
+.ex-item .wp{font-size:1rem;line-height:1.75;max-width:none}
+.ex-item .ex-a{margin-top:4px;font-family:var(--display);color:var(--ok)}
+.card-name{font-size:1.15rem;line-height:1.2}
+.card-meta{font-size:.85rem;color:#fff;min-height:1.2em}
+.tag{
+  position:absolute;top:-12px;left:-7px;z-index:1;
+  background:var(--tagc,var(--orange));border:2.5px solid var(--ink);border-radius:6px;padding:1px 8px;
+  font-family:var(--display);font-size:.8rem;transform:rotate(-4deg);box-shadow:0 2px 0 var(--ink);
+}
+.stars{display:flex;justify-content:center;gap:3px;font-size:1.25rem;line-height:1}
+.star{color:rgba(0,0,0,.28);text-shadow:none}
+.star.on{color:var(--gold);text-shadow:0 0 0 var(--ink),-1.5px -1.5px 0 var(--ink),1.5px -1.5px 0 var(--ink),-1.5px 1.5px 0 var(--ink),1.5px 1.5px 0 var(--ink)}
+.price{width:100%}
+.equipped{border-color:#fff;box-shadow:0 0 0 3px var(--ink),inset 0 3px 0 rgba(255,255,255,.35), inset 0 -6px 0 rgba(0,0,0,.2), 0 5px 0 var(--ink)}
+
+/* ---------- 뽑기 ---------- */
+.gacha-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px 16px}
+.machine{gap:9px;padding:10px 12px 12px}
+.machine .card-name{font-size:1.5rem}
+.machine-art{aspect-ratio:auto;height:170px}
+.machine-art .capsule{font-size:4.2rem;animation:bob 2.2s ease-in-out infinite;text-shadow:0 6px 0 rgba(0,0,0,.25)}
+@keyframes bob{50%{transform:translateY(-8px) rotate(-4deg)}}
+.oddsbar{display:flex;height:16px;border:2.5px solid var(--ink);border-radius:6px;overflow:hidden;background:var(--well)}
+.tier-rare{background:var(--blue)} .tier-epic{background:var(--purple)} .tier-legend{background:var(--orange)}
+.tier-mythic{background:linear-gradient(90deg,#ff4d6d,#ffb703,#3ad35b,#3a8cf0,#9b5cf0)}
+.odds-legend,.pity,.need{font-size:.92rem}
+.pity b{font-family:var(--display);font-weight:400;color:var(--gold)}
+.dex-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:16px}
+.dex-head h3{margin:0;font-size:1.35rem}
+.sil{filter:brightness(0);opacity:.45}
+.locked{font-size:.9rem;min-height:38px;display:grid;place-items:center}
+.glow-legend{box-shadow:0 0 0 3px var(--gold),0 0 18px 4px rgba(255,200,58,.75),inset 0 3px 0 rgba(255,255,255,.35),inset 0 -6px 0 rgba(0,0,0,.2)}
+.glow-mythic{background:linear-gradient(135deg,#ff4d6d,#ffb703,#3ad35b,#3a8cf0,#9b5cf0,#ff4d6d);background-size:300% 300%;animation:rainbow 5s linear infinite;box-shadow:0 0 20px 5px rgba(224,50,143,.6),inset 0 3px 0 rgba(255,255,255,.35),inset 0 -6px 0 rgba(0,0,0,.2)}
+@keyframes rainbow{to{background-position:300% 50%}}
+.odds h4{margin:14px 0 8px;font-family:var(--display);font-weight:400;font-size:1.05rem}
+.odds h4:first-child{margin-top:0}
+.odds .note{margin-top:8px}
+.tdot{display:inline-block;width:13px;height:13px;border:2px solid var(--ink);border-radius:3px;margin-right:7px;vertical-align:-2px}
+.reveal{position:relative;overflow:hidden;min-height:320px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;padding:24px 12px;border:3px solid var(--ink);border-radius:12px;background:var(--well)}
+.reveal.show{background:var(--tc)}
+.reveal.show.tier-mythic{background:linear-gradient(135deg,#ff4d6d,#ffb703,#3ad35b,#3a8cf0,#9b5cf0,#ff4d6d);background-size:300% 300%;animation:rainbow 3s linear infinite}
+.reveal > :not(.rays){position:relative;z-index:1}
+.rays{position:absolute;inset:-60%;background:repeating-conic-gradient(rgba(255,255,255,.3) 0 10deg,transparent 10deg 20deg);animation:spin 9s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.capsule{display:inline-block;font-size:5.5rem;line-height:1}
+.shaking{animation:wobble .45s ease-in-out infinite}
+@keyframes wobble{25%{transform:rotate(-14deg) scale(1.06)}75%{transform:rotate(14deg) scale(1.06)}}
+.tier-label{font-size:2.3rem;animation:pop .35s cubic-bezier(.2,1.6,.4,1)}
+.big-ico{font-size:7rem;line-height:1.05;animation:pop .55s cubic-bezier(.2,1.6,.4,1) .1s backwards;filter:drop-shadow(0 6px 0 rgba(0,0,0,.3))}
+.rv-name{font-size:1.7rem}
+.rv-note{margin:4px 0 0;font-size:1rem}
+.new-badge{margin:4px 0 0;background:var(--red);border:2.5px solid var(--ink);border-radius:8px;padding:3px 12px;font-size:1rem;box-shadow:0 3px 0 var(--ink)}
+
+/* ---------- 문제 풀이 ---------- */
+.round{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+.round-top{display:flex;align-items:center;gap:10px}
+.progress{flex:1;display:grid;grid-template-columns:repeat(10,1fr);gap:4px}
+.seg{height:20px;border:2.5px solid var(--ink);border-radius:4px;background:var(--well);box-shadow:inset 0 3px 0 rgba(0,0,0,.25)}
+.seg.ok{background:var(--ok);box-shadow:inset 0 3px 0 rgba(255,255,255,.35)}
+.seg.ng{background:var(--ng);box-shadow:inset 0 3px 0 rgba(255,255,255,.3)}
+.seg.now{background:var(--gold);animation:blink 1.2s ease-in-out infinite}
+@keyframes blink{50%{filter:brightness(1.25)}}
+.timer{font-size:1.05rem;min-height:40px;padding:4px 12px}
+.board{
+  position:relative;background:var(--surface);color:var(--text);border:4px solid var(--ink);border-radius:14px;
+  box-shadow:inset 0 -6px 0 rgba(0,0,0,.08),0 5px 0 var(--ink);
+  padding:30px 16px 26px;text-align:center;
+}
+.board-cat{
+  position:absolute;top:-15px;left:50%;transform:translateX(-50%);white-space:nowrap;
+  background:var(--catc,var(--purple));border:2.5px solid var(--ink);border-radius:8px;padding:2px 12px;font-size:.95rem;box-shadow:0 3px 0 var(--ink);
+}
+.board-num{position:absolute;top:10px;right:14px;font-size:.9rem;color:var(--text-soft)}
+.expr{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:.32em;font-family:var(--display);font-size:clamp(2.1rem,8vw,3.4rem);line-height:1}
+.expr .op{color:var(--purple)}
+.expr .q{color:var(--text-soft)}
+.frac{display:inline-flex;flex-direction:column;align-items:center;vertical-align:middle;font-size:.78em;line-height:1.05}
+.frac .n{padding:0 .14em .06em;border-bottom:.09em solid currentColor}
+.frac .d{padding:.06em .14em 0}
+.mixed{display:inline-flex;align-items:center;gap:.08em}
+.eqs{margin:0 .3em;opacity:.6}
+.answer-row{display:flex;gap:10px}
+.answer{
+  flex:1;min-width:0;height:64px;text-align:center;font-family:var(--display);font-size:1.9rem;letter-spacing:.04em;
+  background:var(--surface);color:var(--text);border:3px solid var(--ink);border-radius:12px;box-shadow:inset 0 4px 0 rgba(0,0,0,.12);
+}
+.answer:focus{outline:none;border-color:var(--gold);box-shadow:inset 0 4px 0 rgba(0,0,0,.12),0 0 0 3px var(--gold)}
+.answer:disabled{opacity:1}
+.shake{animation:shake .35s}
+@keyframes shake{20%,60%{transform:translateX(-7px)}40%,80%{transform:translateX(7px)}}
+.hotbar{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:7px}
+.key{
+  position:relative;aspect-ratio:1.12;min-height:48px;display:grid;place-items:center;
+  font-family:var(--display);font-size:1.6rem;box-shadow:0 3px 0 var(--ink);transition:transform .06s,border-color .06s;
+}
+.key small{position:absolute;top:3px;left:6px;font-family:var(--font);font-size:.68rem;opacity:.75}
+.key.wide-label{font-size:1rem}
+.key:active,.key.hit{transform:translateY(2px);border-color:var(--gold);box-shadow:0 1px 0 var(--ink)}
+.hint{margin:0;text-align:center;color:#fff;font-size:.92rem}
+.feedback{min-height:64px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;position:relative}
+.fb-big{font-size:2rem;animation:pop .32s cubic-bezier(.2,1.6,.4,1)}
+.fb-msg{font-size:1.1rem}
+.fb-answer{display:inline-flex;align-items:center;gap:.4em;background:var(--surface);color:var(--text);border:3px solid var(--ink);border-radius:10px;padding:6px 14px;font-family:var(--display);font-size:1.6rem}
+.fb-warn{background:var(--gold);color:var(--ink);border:3px solid var(--ink);border-radius:10px;padding:8px 14px;font-size:1.05rem;box-shadow:0 3px 0 var(--ink)}
+@keyframes pop{0%{transform:scale(.5);opacity:0}100%{transform:scale(1);opacity:1}}
+.float-coin{position:absolute;left:50%;top:0;display:inline-flex;align-items:center;gap:6px;font-family:var(--display);font-size:1.4rem;pointer-events:none;animation:floatup 1s ease-out forwards}
+@keyframes floatup{0%{transform:translate(-50%,10px);opacity:0}25%{opacity:1}100%{transform:translate(-50%,-46px);opacity:0}}
+.round-foot{display:flex;justify-content:space-between;gap:10px;color:#fff;font-size:1rem;flex-wrap:wrap}
+.round-foot b{font-family:var(--display);color:var(--gold);font-weight:400;text-shadow:-1px -1px 0 var(--ink),1px -1px 0 var(--ink),-1px 1px 0 var(--ink),1px 1px 0 var(--ink)}
+
+/* ---------- 뱃지 ---------- */
+.badge-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+.badge{display:flex;gap:12px;align-items:center;padding:12px;border:3px solid var(--ink);border-radius:12px;background:var(--surface);color:var(--text);box-shadow:0 4px 0 var(--ink)}
+.badge-ico{width:60px;height:60px;flex:none;display:grid;place-items:center;font-size:2rem;border:3px solid var(--ink);border-radius:10px;
+  background:radial-gradient(circle,rgba(255,255,255,.55),transparent 65%),repeating-conic-gradient(rgba(255,255,255,.22) 0 12deg,transparent 12deg 24deg),var(--gold)}
+.badge.locked .badge-ico{background:var(--surface-2);filter:grayscale(1);opacity:.55}
+.badge h3{margin:0;font-family:var(--display);font-weight:400;font-size:1.1rem}
+.badge p{margin:3px 0 0;font-size:.88rem;color:var(--text-soft);line-height:1.35}
+.badge .prog{margin-top:6px;height:10px;border:2px solid var(--ink);border-radius:5px;background:var(--surface-2);overflow:hidden}
+.badge .prog i{display:block;height:100%;background:var(--green)}
+.badge .got{font-family:var(--display);font-size:.8rem;color:var(--ok)}
+
+/* ---------- 기록 ---------- */
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
+.tile{text-align:center;padding:12px 8px}
+.tile .v{font-family:var(--display);font-size:2rem;line-height:1.1}
+.tile .l{font-size:.9rem;color:var(--text-soft)}
+.stats-cols{display:grid;grid-template-columns:1.1fr .9fr;gap:14px;margin-bottom:14px}
+.sheet h3{margin:0 0 12px;font-family:var(--display);font-weight:400;font-size:1.2rem}
+.catrow{display:grid;grid-template-columns:7.5em 1fr 4.6em;align-items:center;gap:8px;margin-bottom:9px;font-size:.95rem}
+.track{height:18px;border:2.5px solid var(--ink);border-radius:6px;background:var(--surface-2);overflow:hidden}
+.track i{display:block;height:100%;background:var(--catc,var(--green));box-shadow:inset 0 3px 0 rgba(255,255,255,.35)}
+.catrow .pct{text-align:right;font-family:var(--display)}
+.catrow .pct small{display:block;font-family:var(--font);font-size:.72rem;color:var(--text-soft)}
+.chart{display:flex;align-items:flex-end;gap:6px;height:150px;padding-top:6px;border-bottom:3px solid var(--ink)}
+.chart .bar{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;gap:3px;font-size:.78rem;color:var(--text-soft)}
+.chart .bar i{width:100%;max-width:34px;min-height:4px;background:var(--blue);border:2.5px solid var(--ink);border-bottom:0;border-radius:5px 5px 0 0;box-shadow:inset 0 3px 0 rgba(255,255,255,.35)}
+.chart .bar.perfect i{background:var(--gold)}
+.empty{color:var(--text-soft);font-size:.95rem;line-height:1.5;margin:0}
+.analysis p{margin:0 0 8px;line-height:1.6;font-size:1.02rem}
+.analysis p:last-child{margin-bottom:0}
+.codebox{width:100%;min-height:90px;resize:vertical;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.78rem;word-break:break-all;background:var(--surface-2);color:var(--text);border:2.5px solid var(--ink);border-radius:8px;padding:8px}
+
+/* ---------- 로그인 ---------- */
+.login{max-width:470px;margin:10px auto 0}
+.logo{text-align:center;margin:8px 0 22px}
+.logo .l1{display:block;font-family:var(--display);font-size:clamp(2.8rem,12vw,4.3rem);line-height:1;color:var(--gold);transform:rotate(-2deg)}
+.logo .l2{display:block;font-size:clamp(1.6rem,7vw,2.3rem);margin-top:6px}
+.logo .blocks{display:flex;justify-content:center;gap:6px;margin-bottom:10px}
+.logo .blocks i{width:26px;height:26px;border:3px solid var(--ink);border-radius:5px;box-shadow:inset 0 3px 0 rgba(255,255,255,.4),inset 0 -4px 0 rgba(0,0,0,.2)}
+.field-label{display:block;margin:0 0 6px;font-size:1.05rem}
+.field{
+  width:100%;height:56px;padding:0 14px;font-size:1.3rem;
+  background:var(--surface);color:var(--text);border:3px solid var(--ink);border-radius:10px;box-shadow:inset 0 4px 0 rgba(0,0,0,.12);
+}
+.field:focus{outline:none;border-color:var(--gold);box-shadow:inset 0 4px 0 rgba(0,0,0,.12),0 0 0 3px var(--gold)}
+.field.pw{text-align:center;letter-spacing:.5em;font-family:var(--display)}
+.form-stack{display:flex;flex-direction:column;gap:14px}
+.err{min-height:1.3em;margin:0;color:#fff;font-size:.98rem}
+.err:not(:empty){background:var(--red);border:2.5px solid var(--ink);border-radius:8px;padding:6px 10px}
+.login-links{display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-top:12px}
+.login-links .linkish{color:#fff}
+
+/* ---------- 모달 ---------- */
+.backdrop{position:fixed;inset:0;z-index:50;background:rgba(8,16,28,.62);display:grid;place-items:center;padding:16px;padding-top:max(16px,env(safe-area-inset-top,0px));padding-bottom:max(16px,env(safe-area-inset-bottom,0px));animation:fade .15s}
+@keyframes fade{from{opacity:0}}
+.modal{width:100%;max-width:460px;max-height:100%;display:flex;flex-direction:column;padding:0;animation:pop .22s ease-out}
+.modal.wide{max-width:860px}
+.modal-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 12px 10px 18px;border-bottom:3px solid var(--ink)}
+.modal-head h2{margin:0;font-size:1.45rem}
+.modal-body{padding:16px;overflow:auto;display:flex;flex-direction:column;gap:14px}
+.modal-body .sheet p{margin:0 0 8px;line-height:1.6}
+.modal-body .sheet p:last-child{margin-bottom:0}
+.actions{display:flex;gap:10px;flex-wrap:wrap}
+.actions .btn{flex:1}
+.result-stars{display:flex;justify-content:center;gap:10px;font-size:3.4rem;line-height:1}
+.result-stars .star{animation:pop .4s cubic-bezier(.2,1.6,.4,1) backwards}
+.result-stars .star:nth-child(2){animation-delay:.12s}.result-stars .star:nth-child(3){animation-delay:.24s}
+.kv{display:grid;grid-template-columns:1fr auto;gap:8px 12px;font-size:1.05rem}
+.kv b{font-family:var(--display);font-weight:400;text-align:right}
+.table-wrap{overflow-x:auto;border:3px solid var(--ink);border-radius:10px;background:var(--surface)}
+table{width:100%;border-collapse:collapse;font-size:.92rem;color:var(--text)}
+th,td{padding:8px 10px;text-align:left;white-space:nowrap;border-bottom:1.5px solid var(--surface-2)}
+th{background:var(--surface-2);font-family:var(--display);font-weight:400}
+td .btn{min-height:32px;font-size:.82rem;padding:.2em .6em}
+.note{font-size:.9rem;color:var(--text-soft);line-height:1.55;margin:0}
+
+/* ---------- 토스트 ---------- */
+.toasts{position:fixed;top:calc(12px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);z-index:80;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none;width:min(92vw,420px)}
+.toast{display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--hud);border:3px solid var(--hud-line);border-radius:12px;color:#fff;font-size:1rem;box-shadow:0 4px 0 var(--ink);animation:pop .25s ease-out}
+.toast .ti{font-size:1.6rem}
+.toast.badge-toast{background:var(--purple);border-color:var(--ink)}
+.toast.out{opacity:0;transform:translateY(-8px);transition:.3s}
+
+/* ---------- 반응형 ---------- */
+@media (max-width:720px){
+  .stats-cols{grid-template-columns:1fr}
+}
+@media (max-width:600px){
+  main{padding:12px 10px 0}
+  .panel{padding:14px 12px}
+  .tabs{grid-template-columns:repeat(2,1fr);gap:10px}
+  .tab{font-size:1.05rem;min-height:50px}
+  .tiles{grid-template-columns:1fr 1fr 1fr;gap:8px}
+  .tile .v{font-size:1.45rem}
+  .card-grid{grid-template-columns:repeat(2,1fr);gap:16px 10px}
+  .card-art{font-size:1.9rem}
+  .card-art.expr-art{font-size:clamp(1.15rem,6vw,1.6rem)}
+  .gacha-grid{grid-template-columns:1fr}
+  .hotbar{gap:5px}
+  .key{font-size:1.3rem;aspect-ratio:auto;height:52px;min-height:0}
+  .key small{display:none}
+  .key.wide-label{font-size:.9rem;white-space:nowrap}
+  .avatar-slot{width:52px;height:52px;font-size:1.8rem}
+  .hud-name{font-size:1.15rem}
+  .catrow{grid-template-columns:6.6em 1fr 4.2em}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none !important;transition:none !important}
+}
+</style>
+</head>
+<body>
+<main>
+  <!-- ===== 로그인 ===== -->
+  <section id="screen-login" class="login" aria-labelledby="logo-title">
+    <h1 class="logo" id="logo-title">
+      <span class="blocks" aria-hidden="true"><i style="background:var(--red)"></i><i style="background:var(--gold)"></i><i style="background:var(--green)"></i><i style="background:var(--blue)"></i></span>
+      <span class="l1 ot">블록 월드</span>
+      <span class="l2 ot">수학 어드벤처</span>
+    </h1>
+    <div class="panel">
+      <form class="form-stack" id="login-form" autocomplete="off" novalidate>
+        <div>
+          <label class="field-label ot-sm" for="login-name">이름</label>
+          <input class="field" id="login-name" maxlength="12" placeholder="예: 김민수" autocomplete="off">
+        </div>
+        <div>
+          <label class="field-label ot-sm" for="login-pw">비밀번호 (숫자 4자리)</label>
+          <input class="field pw" id="login-pw" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="••••" autocomplete="off">
+        </div>
+        <p class="err" id="login-err" role="alert"></p>
+        <button type="submit" class="btn btn-green btn-lg">▶ 모험 시작</button>
+      </form>
+      <div class="login-links">
+        <button type="button" class="linkish" id="btn-import">다른 기기 기록 가져오기</button>
+        <button type="button" class="linkish" id="btn-teacher">교사용 메뉴</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 로비 ===== -->
+  <section id="screen-lobby" hidden>
+    <header class="hud">
+      <div class="hud-me">
+        <div class="slot avatar-slot" id="hud-avatar" aria-hidden="true">🧢</div>
+        <div>
+          <div class="hud-name ot" id="hud-name"></div>
+          <div class="hud-sub ot-sm" id="hud-sub"></div>
+        </div>
+      </div>
+      <div class="hud-right">
+        <div class="pill ot-sm" aria-label="보유 코인"><span class="coin" aria-hidden="true"></span><span id="hud-coins">0</span></div>
+        <button class="btn btn-red btn-sm" id="btn-logout">나가기</button>
+      </div>
+    </header>
+
+    <nav class="tabs" role="tablist" aria-label="메뉴">
+      <button class="btn tab" style="--c:var(--blue)" role="tab" id="tab-btn-play" aria-controls="tab-play" aria-selected="true" data-tab="play"><span class="ico">🎮</span>모험</button>
+      <button class="btn tab" style="--c:var(--green)" role="tab" id="tab-btn-shop" aria-controls="tab-shop" aria-selected="false" data-tab="shop"><span class="ico">👕</span>상점</button>
+      <button class="btn tab" style="--c:var(--red)" role="tab" id="tab-btn-badges" aria-controls="tab-badges" aria-selected="false" data-tab="badges"><span class="ico">🏆</span>뱃지</button>
+      <button class="btn tab" style="--c:var(--purple)" role="tab" id="tab-btn-stats" aria-controls="tab-stats" aria-selected="false" data-tab="stats"><span class="ico">📊</span>기록</button>
+    </nav>
+
+    <!-- 모험 -->
+    <section class="panel" id="tab-play" role="tabpanel" aria-labelledby="tab-btn-play">
+      <div id="stage-select">
+        <div class="section-head">
+          <div>
+            <h2 class="ot">스테이지 고르기</h2>
+            <p class="ot-sm">한 스테이지는 10문제예요. 모두 맞히면 보너스 코인! 섞어서 도전은 코인 2배, 문장제 문제는 코인 3배예요.</p>
+          </div>
+        </div>
+        <div class="well"><div class="card-grid" id="stage-grid"></div></div>
+      </div>
+
+      <div id="round" class="round" hidden>
+        <div class="round-top">
+          <button class="btn btn-red btn-sm" id="btn-quit">그만하기</button>
+          <div class="progress" id="progress" aria-label="스테이지 진행"></div>
+          <div class="pill timer ot-sm" id="timer" aria-live="off">⏱ 0초</div>
+        </div>
+        <div class="board">
+          <span class="board-cat ot-sm" id="board-cat"></span>
+          <span class="board-num" id="board-num"></span>
+          <div class="expr" id="expr" aria-live="polite"></div>
+        </div>
+        <div class="answer-row">
+          <input class="answer" id="answer" maxlength="14" autocomplete="off" aria-label="정답 입력" placeholder="정답">
+          <span class="pill unit ot-sm" id="answer-unit" hidden></span>
+        </div>
+        <div class="hotbar" id="hotbar"></div>
+        <p class="hint ot-sm">분수는 3/4, 대분수는 1 3/4처럼 띄어 쓰고, 소수는 0.75처럼 써요.</p>
+        <button class="btn btn-green btn-lg" id="btn-submit">제출 (Enter)</button>
+        <div class="feedback" id="feedback" aria-live="assertive"></div>
+        <div class="round-foot ot-sm">
+          <span>연속 정답 <b id="rf-streak">0</b></span>
+          <span>이번 스테이지 코인 <b id="rf-coins">0</b></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 상점 -->
+    <section class="panel" id="tab-shop" role="tabpanel" aria-labelledby="tab-btn-shop" hidden>
+      <div class="section-head">
+        <div>
+          <h2 class="ot">캐릭터 뽑기</h2>
+          <p class="ot-sm">캐릭터는 뽑기로만 얻을 수 있어요. 코인은 문제를 맞혀서 모아요.</p>
+        </div>
+      </div>
+      <div class="gacha-grid" id="gacha-machines"></div>
+      <div class="well" style="margin-top:20px">
+        <div class="dex-head"><h3 class="ot">캐릭터 도감</h3><span class="ot-sm" id="dex-count"></span></div>
+        <div class="card-grid" id="shop-grid"></div>
+      </div>
+      <div class="sheet odds" style="margin-top:16px"><h3>뽑기 확률 정보</h3><div id="odds"></div></div>
+    </section>
+
+    <!-- 뱃지 -->
+    <section class="panel" id="tab-badges" role="tabpanel" aria-labelledby="tab-btn-badges" hidden>
+      <div class="section-head">
+        <div>
+          <h2 class="ot">업적 뱃지</h2>
+          <p class="ot-sm" id="badge-count"></p>
+        </div>
+      </div>
+      <div class="badge-grid" id="badge-grid"></div>
+    </section>
+
+    <!-- 기록 -->
+    <section class="panel" id="tab-stats" role="tabpanel" aria-labelledby="tab-btn-stats" hidden>
+      <div class="section-head"><div><h2 class="ot">나의 성장 기록</h2></div></div>
+      <div class="tiles">
+        <div class="sheet tile"><div class="v" id="st-solved">0</div><div class="l">푼 문제</div></div>
+        <div class="sheet tile"><div class="v" id="st-acc">-</div><div class="l">정답률</div></div>
+        <div class="sheet tile"><div class="v" id="st-time">-</div><div class="l">평균 풀이 시간</div></div>
+      </div>
+      <div class="sheet analysis" id="analysis" style="margin-bottom:14px"></div>
+      <div class="stats-cols">
+        <div class="sheet"><h3>단원별 정답률</h3><div id="cat-bars"></div></div>
+        <div class="sheet"><h3>최근 스테이지 (맞힌 문제 수)</h3><div id="round-chart"></div></div>
+      </div>
+      <div class="sheet">
+        <h3>다른 기기에서 이어 하기</h3>
+        <p class="note" style="margin-bottom:10px">기록은 이 기기의 브라우저에 저장돼요. 다른 컴퓨터나 태블릿에서 이어 하려면 코드를 만들어 복사한 뒤, 그 기기의 첫 화면에서 ‘다른 기기 기록 가져오기’에 붙여 넣으세요.</p>
+        <button class="btn btn-purple btn-sm" id="btn-export">이어 하기 코드 만들기</button>
+      </div>
+    </section>
+  </section>
+</main>
+
+<div class="ground" aria-hidden="true"><div class="fence"></div><div class="plate"></div></div>
+<div id="modal-root"></div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<script>
+'use strict';
+/* ================= 기본 도구 ================= */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const rand = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const fmt = n => Number(n).toLocaleString('ko-KR');
+const coarse = window.matchMedia && matchMedia('(pointer: coarse)').matches;
+
+/* ================= 정확한 분수 계산 ================= */
+const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) { const t = a % b; a = b; b = t; } return a; };
+const lcm = (a, b) => a / gcd(a, b) * b;
+function R(n, d = 1) { if (d < 0) { n = -n; d = -d; } const g = gcd(n, d) || 1; return { n: n / g, d: d / g }; }
+const OPS = {
+  '+': (a, b) => R(a.n * b.d + b.n * a.d, a.d * b.d),
+  '-': (a, b) => R(a.n * b.d - b.n * a.d, a.d * b.d),
+  '×': (a, b) => R(a.n * b.n, a.d * b.d),
+  '÷': (a, b) => R(a.n * b.d, a.d * b.n),
+};
+const req = (a, b) => a.n * b.d === b.n * a.d;
+function decR(s) { const [i, f = ''] = s.split('.'); return R(parseInt((i || '0') + f, 10), 10 ** f.length); }
+function decStr(r) {
+  for (let k = 0; k <= 6; k++) {
+    const p = 10 ** k;
+    if (p % r.d === 0) {
+      const v = r.n * (p / r.d), neg = v < 0;
+      let s = String(Math.abs(v));
+      if (k > 0) { s = s.padStart(k + 1, '0'); s = s.slice(0, -k) + '.' + s.slice(-k); s = s.replace(/0+$/, '').replace(/\.$/, ''); }
+      return (neg ? '-' : '') + s;
+    }
+  }
+  return null;
+}
+// 피연산자: {t:'f',n,d} 분수 / {t:'i',v} 자연수 / {t:'d',s} 소수
+const val = o => o.t === 'f' ? R(o.n, o.d) : o.t === 'i' ? R(o.v) : decR(o.s);
+const txt = o => o.t === 'f' ? `${o.n}/${o.d}` : o.t === 'i' ? String(o.v) : o.s;
+const fracHTML = (n, d) => `<span class="frac"><span class="n">${n}</span><span class="d">${d}</span></span>`;
+const opndHTML = o => o.t === 'f' ? fracHTML(o.n, o.d) : esc(txt(o));
+function mk(cat, a, op, b) {
+  return { cat, a, op, b, ans: OPS[op](val(a), val(b)), kind: (a.t === 'd' || b.t === 'd') ? 'dec' : 'frac', key: `${txt(a)}${op}${txt(b)}` };
+}
+function ansHTML(p) {
+  const r = p.ans;
+  if (p.kind === 'dec') { const s = decStr(r); if (s !== null) return esc(s); }
+  if (r.d === 1) return String(r.n);
+  if (r.n > r.d) return `${fracHTML(r.n, r.d)}<span class="eqs">=</span><span class="mixed">${Math.floor(r.n / r.d)}${fracHTML(r.n % r.d, r.d)}</span>`;
+  return fracHTML(r.n, r.d);
+}
+function ansText(p) {
+  const r = p.ans;
+  if (p.kind === 'dec') { const s = decStr(r); if (s !== null) return s; }
+  if (r.d === 1) return String(r.n);
+  if (r.n > r.d) return `${r.n}/${r.d} (= ${Math.floor(r.n / r.d)} ${r.n % r.d}/${r.d})`;
+  return `${r.n}/${r.d}`;
+}
+
+/* ================= 학생 답 해석 ================= */
+function parseAnswer(raw) {
+  const s = raw.replace(/[，,]/g, '').replace(/／/g, '/').replace(/．/g, '.')
+    .replace(/\s*(과|와)\s*/g, ' ').replace(/\s*\/\s*/g, '/').replace(/\s+/g, ' ').trim();
+  let m;
+  if (/^\d+$/.test(s)) return { r: R(+s), clean: true };
+  if (/^\d*\.\d+$/.test(s) || /^\d+\.$/.test(s)) return { r: decR(s.replace(/\.$/, '')), clean: true };
+  if ((m = s.match(/^(\d+)\/(\d+)$/))) {
+    const n = +m[1], d = +m[2]; if (!d) return null;
+    return { r: R(n, d), clean: d !== 1 && n !== 0 && gcd(n, d) === 1 };
+  }
+  if ((m = s.match(/^(\d+) (\d+)\/(\d+)$/))) {
+    const w = +m[1], n = +m[2], d = +m[3]; if (!d) return null;
+    return { r: R(w * d + n, d), clean: n > 0 && n < d && gcd(n, d) === 1 };
+  }
+  return null;
+}
+function checkAnswer(raw, p) {
+  const a = parseAnswer(raw);
+  if (!a) return 'invalid';
+  if (!req(a.r, p.ans)) return 'wrong';
+  if (!a.clean) return 'reduce';
+  return 'correct';
+}
+
+/* ================= 문제 만들기 ================= */
+function reducedProper(minD, maxD) {
+  for (;;) { const d = rand(minD, maxD), n = rand(1, d - 1); if (gcd(n, d) === 1) return { t: 'f', n, d }; }
+}
+const notTen = (a, b) => { let v; do { v = rand(a, b); } while (v % 10 === 0); return v; };
+const decOp = r => ({ t: 'd', s: decStr(r) });
+const GEN = {
+  fas() {
+    for (;;) {
+      const A = reducedProper(2, 10), B = reducedProper(2, 10);
+      if (A.d === B.d || lcm(A.d, B.d) > 40) continue;
+      if (Math.random() < .5) return mk('fas', A, '+', B);
+      return A.n * B.d > B.n * A.d ? mk('fas', A, '-', B) : mk('fas', B, '-', A);
+    }
+  },
+  fmul() {
+    const r = Math.random();
+    if (r < .7) return mk('fmul', reducedProper(2, 9), '×', reducedProper(2, 9));
+    const w = { t: 'i', v: rand(2, 9) }, A = reducedProper(2, 9);
+    return r < .85 ? mk('fmul', w, '×', A) : mk('fmul', A, '×', w);
+  },
+  fdiv() {
+    const r = Math.random();
+    if (r < .65) { for (;;) { const A = reducedProper(2, 9), B = reducedProper(2, 9); if (A.n !== B.n || A.d !== B.d) return mk('fdiv', A, '÷', B); } }
+    if (r < .85) return mk('fdiv', reducedProper(2, 9), '÷', { t: 'i', v: rand(2, 6) });
+    return mk('fdiv', { t: 'i', v: rand(2, 6) }, '÷', reducedProper(2, 9));
+  },
+  das() {
+    const one = () => { if (Math.random() < .45) return notTen(11, 999); return notTen(1, 99) * 10; }; // 단위: 0.01
+    let x = one(), y = one();
+    while (x === y) y = one();
+    const op = Math.random() < .5 ? '+' : '-';
+    if (op === '-' && x < y) [x, y] = [y, x];
+    return mk('das', decOp(R(x, 100)), op, decOp(R(y, 100)));
+  },
+  dmul() {
+    const a = decOp(R(notTen(2, 49), 10));
+    const b = Math.random() < .5 ? decOp(R(notTen(2, 19), 10)) : { t: 'i', v: rand(2, 9) };
+    return Math.random() < .5 ? mk('dmul', a, '×', b) : mk('dmul', b, '×', a);
+  },
+  ddiv() {
+    if (Math.random() < .7) {
+      const dv = R(notTen(2, 25), 10);
+      const q = Math.random() < .6 ? R(rand(2, 12)) : R(notTen(11, 49), 10);
+      return mk('ddiv', decOp(OPS['×'](dv, q)), '÷', decOp(dv));
+    }
+    const w = rand(2, 9), q = R(notTen(2, 99), 10);
+    return mk('ddiv', decOp(OPS['×'](R(w), q)), '÷', { t: 'i', v: w });
+  },
+};
+const CATS = [
+  { id: 'fas', name: '분수 덧셈·뺄셈', art: '½+⅓', color: 'var(--orange)' },
+  { id: 'fmul', name: '분수 곱셈', art: '⅔×¾', color: 'var(--purple)' },
+  { id: 'fdiv', name: '분수 나눗셈', art: '¾÷½', color: 'var(--pink)' },
+  { id: 'das', name: '소수 덧셈·뺄셈', art: '0.5+0.3', color: 'var(--teal)' },
+  { id: 'dmul', name: '소수 곱셈', art: '0.4×0.6', color: 'var(--blue)' },
+  { id: 'ddiv', name: '소수 나눗셈', art: '1.5÷0.3', color: 'var(--red)' },
+];
+const CAT = Object.fromEntries(CATS.map(c => [c.id, c]));
+const WORD_CAT = { id: 'word', name: '문장제', color: 'var(--wood)' };
+CAT.word = WORD_CAT;
+const STAT_CATS = [...CATS, WORD_CAT];
+const MODES = [...CATS,
+  { id: 'mix', name: '섞어서 도전', art: '?!', color: 'var(--red)', tag: '코인 ×2', tagc: 'var(--gold)', meta: '여섯 단원이 섞여 나와요', mult: 2 },
+  { id: 'word', name: '문장제 문제', art: '📝', color: 'var(--wood)', tag: '코인 ×3', tagc: 'var(--gold)', meta: '최고 난도 · 두세 단계 풀이', mult: 3 }];
+const MODE = Object.fromEntries(MODES.map(m => [m.id, m]));
+
+// ===== 문장제 문제 (두세 단계 풀이, 정답은 코드가 정확히 계산) =====
+const rf = r => r.d === 1 ? String(r.n) : r.n > r.d ? `${Math.floor(r.n / r.d)}${fracHTML(r.n % r.d, r.d)}` : fracHTML(r.n, r.d); // 대분수로 보여 주기
+const rd = r => decStr(r);
+const one = R(1);
+const mixedR = (w, n, d) => R(w * d + n, d);
+function nicePropers() { return pick([R(1, 2), R(1, 3), R(2, 3), R(1, 4), R(3, 4), R(2, 5), R(3, 5), R(4, 5), R(1, 6), R(5, 6), R(3, 7), R(3, 8), R(5, 8)]); }
+const WORD_GENS = [
+  { title: '남은 양으로 처음 양 구하기', gen() {
+    const A = nicePropers(), B = nicePropers(), T = A.d * B.d * rand(2, 5);
+    const rem = OPS['×'](OPS['×'](R(T), OPS['-'](one, A)), OPS['-'](one, B));
+    return { text: `물통에 물이 가득 들어 있었습니다. 첫날에는 전체의 ${rf(A)}만큼 쓰고, 둘째 날에는 남은 물의 ${rf(B)}만큼 썼더니 <b>${rf(rem)} L</b>가 남았습니다. 처음 물통에 들어 있던 물은 몇 L인가요?`, ans: R(T), unit: 'L', kind: 'frac' };
+  } },
+  { title: '철사로 도형 만들고 남은 길이 나누기', gen() {
+    const s = R(notTen(4, 18), 10), k = rand(2, 5), m = rand(3, 7), q = R(rand(12, 95), 100);
+    const L = OPS['+'](OPS['×'](s, R(3 * k)), OPS['×'](q, R(m)));
+    return { text: `길이가 <b>${rd(L)} m</b>인 철사로 한 변이 ${rd(s)} m인 정삼각형을 ${k}개 만들었습니다. 남은 철사를 똑같이 ${m}도막으로 자르면 한 도막의 길이는 몇 m인가요?`, ans: q, unit: 'm', kind: 'dec' };
+  } },
+  { title: '대분수 시간과 분 단위 속력', gen() {
+    const d = pick([2, 3, 4, 5, 6]), w = rand(1, 3), n = pick([...Array(d - 1).keys()].map(x => x + 1).filter(x => gcd(x, d) === 1));
+    const h = mixedR(w, n, d), v = d * rand(Math.ceil(40 / d), Math.floor(90 / d)), X = OPS['×'](R(v), h);
+    const mins = pick([20, 25, 35, 40, 45, 50, 75, 80, 100]);
+    return { text: `자동차가 일정한 빠르기로 ${rf(h)}시간 동안 <b>${rf(X)} km</b>를 달렸습니다. 같은 빠르기로 <b>${mins}분</b> 동안 달리면 몇 km를 갈 수 있나요?`, ans: R(v * mins, 60), unit: 'km', kind: 'frac' };
+  } },
+  { title: '잘못 계산한 값으로 바르게 계산하기 (분수)', gen() {
+    const A = pick([R(2, 3), R(3, 4), R(4, 5), R(3, 5), R(5, 6), R(4, 3), R(5, 4), R(7, 5)]), B = pick([R(9, 4), R(10, 3), R(7, 2), R(15, 8), R(8, 3), R(12, 5)]);
+    const ans = OPS['×'](OPS['×'](B, A), A);
+    return { text: `어떤 수 ▢에 대해 ▢ × ${rf(A)}의 값을 구해야 하는데, 실수로 ▢ ÷ ${rf(A)}의 값을 구했고 그 결과는 <b>${rf(B)}</b>입니다. 바르게 계산한 값은 얼마인가요?`, ans, unit: '', kind: 'frac' };
+  } },
+  { title: '잘못 계산한 값으로 바르게 계산하기 (소수)', gen() {
+    if (Math.random() < .5) {
+      const x = R(notTen(11, 99), 10), m = R(notTen(12, 49), 10), S = OPS['+'](x, m);
+      return { text: `어떤 수 ▢에 대해 ▢ × ${rd(m)}의 값을 구해야 하는데, 실수로 ▢ + ${rd(m)}의 값을 구했고 그 결과는 <b>${rd(S)}</b>입니다. 바르게 계산한 값은 얼마인가요?`, ans: OPS['×'](x, m), unit: '', kind: 'dec' };
+    }
+    for (;;) {
+      const m = R(notTen(12, 35), 10), q = R(notTen(15, 90), 10), x = OPS['×'](q, m), S = OPS['-'](x, m);
+      if (S.n <= 0 || decStr(x).split('.')[1]?.length > 2) continue;
+      return { text: `어떤 수 ▢에 대해 ▢ ÷ ${rd(m)}의 값을 구해야 하는데, 실수로 ▢ − ${rd(m)}의 값을 구했고 그 결과는 <b>${rd(S)}</b>입니다. 바르게 계산한 값은 얼마인가요?`, ans: q, unit: '', kind: 'dec' };
+    }
+  } },
+  { title: '밭 넓이를 차례로 나누기', gen() {
+    const d0 = pick([2, 3, 4]), a = mixedR(rand(3, 8), rand(1, d0 - 1), d0), b = R(rand(4, 12)), C = nicePropers(), E = nicePropers();
+    const ans = OPS['×'](OPS['×'](OPS['×'](a, b), OPS['-'](one, C)), E);
+    return { text: `가로 ${rf(a)} m, 세로 ${b.n} m인 직사각형 모양 밭이 있습니다. 밭 전체의 ${rf(C)}에는 고추를 심고, 나머지의 ${rf(E)}에는 상추를 심었습니다. 상추를 심은 밭의 넓이는 몇 m²인가요?`, ans, unit: 'm²', kind: 'frac' };
+  } },
+  { title: '페인트로 칠할 수 있는 넓이', gen() {
+    const a = mixedR(rand(1, 3), 1, pick([2, 3, 4])), c = pick([R(2, 3), R(3, 4), R(3, 5), R(5, 6), R(4, 5)]), e = Math.random() < .5 ? R(rand(2, 6)) : mixedR(rand(2, 4), 1, 2);
+    const ans = OPS['×'](OPS['÷'](e, c), a);
+    return { text: `벽을 ${rf(a)} m²만큼 칠하는 데 페인트가 ${rf(c)} L 듭니다. 페인트 <b>${rf(e)} L</b>로는 벽을 몇 m² 칠할 수 있나요?`, ans, unit: 'm²', kind: 'frac' };
+  } },
+  { title: '늦게 가는 시계', gen() {
+    const d = pick([3, 4, 5]), rate = mixedR(rand(1, 3), rand(1, d - 1), d), M = rand(30, 90);
+    const days = Math.ceil(M * rate.d / rate.n);
+    return { text: `어떤 시계는 하루에 ${rf(rate)}분씩 늦어집니다. 오늘 정오에 시계를 정확히 맞추었다면, 이 시계가 처음으로 <b>${M}분 이상</b> 늦어지는 것은 며칠 뒤 정오인가요?`, ans: R(days), unit: '일 뒤', kind: 'frac' };
+  } },
+  { title: '평균을 올리려면 몇 점?', gen() {
+    for (;;) {
+      const S = rand(320, 380), x = rand(80, 100), avg1 = R(S, 4), avg2 = R(S + x, 5);
+      if (avg2.n * avg1.d <= avg1.n * avg2.d) continue;
+      return { text: `민수가 본 수학 시험 4번의 평균 점수는 ${rd(avg1)}점입니다. 5번째 시험을 보고 나서 5번의 평균 점수가 <b>${rd(avg2)}점</b>이 되려면, 5번째 시험에서 몇 점을 받아야 하나요?`, ans: R(x), unit: '점', kind: 'dec' };
+    }
+  } },
+  { title: '함께 하다가 혼자 하는 일', gen() {
+    for (let t = 0; t < 400; t++) {
+      const a = rand(6, 15), b = rand(8, 20), c = rand(1, 4);
+      if (a === b) continue;
+      const rem = OPS['-'](one, OPS['×'](R(c), OPS['+'](R(1, a), R(1, b))));
+      if (rem.n <= 0) continue;
+      const ans = OPS['×'](rem, R(a));
+      if (ans.d !== 1 && t < 300) continue;
+      return { text: `어떤 일을 민수가 혼자 하면 ${a}일, 지원이가 혼자 하면 ${b}일이 걸립니다. 두 사람이 함께 ${c}일 동안 일한 뒤, 남은 일을 민수 혼자 했습니다. 민수가 혼자 일한 날은 며칠인가요? (두 사람이 하루에 하는 일의 양은 각각 일정합니다.)`, ans, unit: '일', kind: 'frac' };
+    }
+  } },
+  { title: '튀어 오르는 공이 움직인 거리', gen() {
+    const r = pick([R(1, 2), R(2, 3), R(3, 4), R(3, 5), R(4, 5)]), h = R(r.d * r.d * rand(1, 4));
+    const ans = OPS['+'](h, OPS['+'](OPS['×'](R(2), OPS['×'](h, r)), OPS['×'](R(2), OPS['×'](h, OPS['×'](r, r)))));
+    return { text: `공을 ${h.n} m 높이에서 떨어뜨렸습니다. 이 공은 땅에 닿으면 떨어진 높이의 ${rf(r)}만큼 다시 튀어 오릅니다. 공이 <b>세 번째로 땅에 닿을 때까지</b> 움직인 거리는 모두 몇 m인가요?`, ans, unit: 'm', kind: 'frac' };
+  } },
+  { title: '꿀이 담긴 통의 무게', gen() {
+    const a = R(rand(12, 16), 10), b = R(notTen(15, 45), 10), w = R(rand(25, 85), 100), d = R(notTen(12, 48), 10);
+    const c = OPS['+'](OPS['×'](a, b), w), ans = OPS['+'](OPS['×'](a, d), w);
+    return { text: `꿀 1 L의 무게는 ${rd(a)} kg입니다. 꿀 ${rd(b)} L를 담은 통의 무게를 재었더니 ${rd(c)} kg이었습니다. 같은 빈 통에 꿀 <b>${rd(d)} L</b>를 담으면 전체 무게는 몇 kg인가요?`, ans, unit: 'kg', kind: 'dec' };
+  } },
+];
+function makeWord(i) { const g = WORD_GENS[i], p = g.gen(); return { cat: 'word', word: true, ...p, title: g.title, key: 'w' + i + ':' + p.text }; }
+
+/* ================= 저장소 ================= */
+const STORE_KEY = 'bwm:v2:students', TEACHER_KEY = 'bwm:v2:teacher';
+const mem = {};
+let storageOK = true;
+const store = {
+  get(k) { try { const v = localStorage.getItem(k); return v == null ? null : JSON.parse(v); } catch (e) { storageOK = false; return k in mem ? JSON.parse(mem[k]) : null; } },
+  set(k, v) { const s = JSON.stringify(v); try { localStorage.setItem(k, s); } catch (e) { storageOK = false; mem[k] = s; } },
+};
+async function hashPw(scope, pw) {
+  const data = new TextEncoder().encode('bwm2|' + scope + '|' + pw);
+  try { if (crypto && crypto.subtle) { const buf = await crypto.subtle.digest('SHA-256', data); return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join(''); } } catch (e) {}
+  let h = 2166136261; for (const b of data) { h ^= b; h = Math.imul(h, 16777619); } return 'f' + (h >>> 0).toString(16);
+}
+function newUser(name, pw) {
+  return { v: 2, name, pw, coins: 0, earned: 0, solved: 0, correct: 0, totalSec: 0, streak: 0, maxStreak: 0, perfect: 0,
+    inv: ['cap'], eq: 'cap', badges: [], cats: [], history: [], rounds: [], best: {}, pity: {}, pulls: 0, created: Date.now(), last: Date.now() };
+}
+function normalize(u) { const b = newUser(u.name, u.pw ?? null); const o = Object.assign(b, u); for (const k of ['inv', 'badges', 'cats', 'history', 'rounds']) if (!Array.isArray(o[k])) o[k] = []; if (typeof o.best !== 'object' || !o.best) o.best = {}; if (typeof o.pity !== 'object' || !o.pity) o.pity = {};
+  const gone = o.inv.filter(id => !ITEM[id]);
+  if (gone.length) { const back = gone.reduce((s, id) => s + (OLD_REFUND[id] || 0), 0); o.coins += back; o._refund = (o._refund || 0) + back; o.inv = o.inv.filter(id => ITEM[id]); }
+  if (!o.inv.includes('cap')) o.inv.unshift('cap');
+  if (!ITEM[o.eq]) o.eq = 'cap';
+  return o; }
+let students = store.get(STORE_KEY) || {};
+let user = null;
+function save() { if (user) user.last = Date.now(); store.set(STORE_KEY, students); }
+
+/* ================= 상점·뱃지 데이터 ================= */
+const TIERS = {
+  rare: { label: '레어', c: 'var(--blue)', refund: 15 },
+  epic: { label: '에픽', c: 'var(--purple)', refund: 40 },
+  legend: { label: '전설', c: 'var(--orange)', refund: 100 },
+  mythic: { label: '신화', c: '#e0328f', refund: 220 },
+};
+const STARTER = { id: 'cap', name: '모자 쓴 모험가', icon: '🧢', r: null };
+const CHARS = [
+  { id: 'robot', name: '계산 로봇', icon: '🤖', r: 'rare' },
+  { id: 'alien', name: '별나라 손님', icon: '👽', r: 'rare' },
+  { id: 'fox', name: '꾀돌이 여우', icon: '🦊', r: 'rare' },
+  { id: 'panda', name: '대나무 판다', icon: '🐼', r: 'rare' },
+  { id: 'penguin', name: '얼음 펭귄', icon: '🐧', r: 'rare' },
+  { id: 'ghost', name: '장난꾸러기 유령', icon: '👻', r: 'rare' },
+  { id: 'wizard', name: '숫자 마법사', icon: '🧙', r: 'epic' },
+  { id: 'lion', name: '황금 갈기 사자', icon: '🦁', r: 'epic' },
+  { id: 'unicorn', name: '무지개 유니콘', icon: '🦄', r: 'epic' },
+  { id: 'eagle', name: '번개 독수리', icon: '🦅', r: 'epic' },
+  { id: 'dragon', name: '황금 드래곤', icon: '🐲', r: 'legend' },
+  { id: 'shark', name: '심해 상어왕', icon: '🦈', r: 'legend' },
+  { id: 'owl', name: '지혜의 부엉이', icon: '🦉', r: 'legend' },
+  { id: 'crown', name: '수학의 제왕', icon: '👑', r: 'mythic' },
+  { id: 'cosmic', name: '무한의 용', icon: '🐉', r: 'mythic' },
+];
+const ITEMS = [STARTER, ...CHARS];
+const ITEM = Object.fromEntries(ITEMS.map(i => [i.id, i]));
+const MACHINES = [
+  { id: 'normal', name: '일반 뽑기', icon: '🎁', price: 120, c: 'var(--teal)', sub: '레어 이상', tagc: 'var(--blue)',
+    odds: { rare: 62, epic: 28, legend: 8.5, mythic: 1.5 }, pity: { n: 20, min: 'legend' } },
+  { id: 'premium', name: '프리미엄 뽑기', icon: '💎', price: 450, c: 'var(--pink)', sub: '에픽 이상', tagc: 'var(--purple)',
+    odds: { epic: 65, legend: 30, mythic: 5 }, pity: { n: 15, min: 'mythic' } },
+];
+// 예전 상점 아이템(닌자·호랑이)은 산 값만큼 코인으로 돌려줘요
+const OLD_REFUND = { ninja: 30, tiger: 220 };
+const acc = u => u.solved ? u.correct / u.solved : 0;
+const avgSec = u => u.solved ? u.totalSec / u.solved : 0;
+const BADGES = [
+  { id: 'first', icon: '🎯', name: '첫 정답', desc: '문제를 처음으로 맞혀요', p: u => [u.correct, 1] },
+  { id: 'streak5', icon: '🔥', name: '연속 정답 5', desc: '5문제를 연달아 맞혀요', p: u => [u.maxStreak, 5] },
+  { id: 'streak10', icon: '☄️', name: '연속 정답 10', desc: '10문제를 연달아 맞혀요', p: u => [u.maxStreak, 10] },
+  { id: 'perfect', icon: '🌟', name: '완벽한 스테이지', desc: '한 스테이지 10문제를 모두 맞혀요', p: u => [u.perfect, 1] },
+  { id: 'explorer', icon: '🧭', name: '단원 탐험가', desc: '여섯 단원을 모두 풀어 봐요', p: u => [CATS.filter(c => u.cats.includes(c.id)).length, 6] },
+  { id: 'solve50', icon: '📚', name: '꾸준한 연습', desc: '문제를 50개 풀어요', p: u => [u.solved, 50] },
+  { id: 'coins100', icon: '💰', name: '코인 모으기', desc: '코인을 모두 100개 벌어요', p: u => [u.earned, 100] },
+  { id: 'speed', icon: '⚡', name: '정확하고 빠르게', desc: '20문제 이상 풀고, 정답률 80% 이상에 평균 8초 안에 풀어요',
+    done: u => u.solved >= 20 && acc(u) >= .8 && avgSec(u) < 8, p: u => [Math.min(u.solved, 20), 20] },
+  { id: 'master', icon: '👑', name: '분수·소수 마스터', desc: '30문제 이상 풀고 정답률 90% 이상이에요',
+    done: u => u.solved >= 30 && acc(u) >= .9, p: u => [Math.min(u.solved, 30), 30] },
+  { id: 'gacha1', icon: '🎁', name: '첫 뽑기', desc: '캐릭터 뽑기를 처음 해 봐요', p: u => [u.pulls, 1] },
+  { id: 'legend', icon: '🏅', name: '전설을 만나다', desc: '전설 등급 이상 캐릭터를 얻어요', p: u => [u.inv.some(id => ['legend', 'mythic'].includes(ITEM[id]?.r)) ? 1 : 0, 1] },
+  { id: 'mythic', icon: '🌈', name: '신화의 주인', desc: '신화 캐릭터를 얻어요', p: u => [u.inv.some(id => ITEM[id]?.r === 'mythic') ? 1 : 0, 1] },
+  { id: 'dex', icon: '📖', name: '도감 완성', desc: '뽑기 캐릭터를 모두 모아요', p: u => [CHARS.filter(c => u.inv.includes(c.id)).length, CHARS.length] },
+];
+function checkBadges() {
+  const fresh = [];
+  for (const b of BADGES) {
+    if (user.badges.includes(b.id)) continue;
+    const ok = b.done ? b.done(user) : (() => { const [c, m] = b.p(user); return c >= m; })();
+    if (ok) { user.badges.push(b.id); fresh.push(b); }
+  }
+  if (fresh.length) { save(); fresh.forEach((b, i) => setTimeout(() => toast(`뱃지 획득! ${b.name}`, b.icon, 'badge-toast'), i * 400)); }
+}
+
+/* ================= 화면 공통 ================= */
+function toast(msg, icon = '💬', cls = '') {
+  const t = document.createElement('div');
+  t.className = 'toast ' + cls;
+  t.innerHTML = `<span class="ti" aria-hidden="true">${icon}</span><span></span>`;
+  t.lastChild.textContent = msg;
+  $('#toasts').appendChild(t);
+  setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 320); }, 2600);
+}
+let modalReturn = null;
+function openModal({ title, html, wide = false, onClose }) {
+  if (!$('#modal-root').firstChild) modalReturn = document.activeElement;
+  const root = $('#modal-root');
+  root.innerHTML = `<div class="backdrop"><div class="modal panel ${wide ? 'wide' : ''}" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal-head"><h2 class="ot" id="modal-title"></h2><button class="btn btn-red btn-x" data-close aria-label="닫기">✕</button></div>
+    <div class="modal-body">${html}</div></div></div>`;
+  $('#modal-title').textContent = title;
+  const bd = root.firstChild;
+  bd._onClose = onClose;
+  bd.addEventListener('click', e => { if (e.target === bd || e.target.closest('[data-close]')) closeModal(); });
+  const f = bd.querySelector('[autofocus]') || bd.querySelector('.modal-body input, .modal-body textarea, .modal-body .btn') || bd.querySelector('.btn');
+  if (f) setTimeout(() => f.focus(), 30);
+  return bd.querySelector('.modal-body');
+}
+function closeModal() {
+  const bd = $('#modal-root').firstChild; if (!bd) return;
+  const cb = bd._onClose; $('#modal-root').innerHTML = '';
+  if (cb) cb();
+  if (!$('#modal-root').firstChild && modalReturn && document.contains(modalReturn)) { try { modalReturn.focus(); } catch (e) {} modalReturn = null; }
+}
+const modalOpen = () => !!$('#modal-root').firstChild;
+function confirmModal({ title, html, yes = '확인', no = '취소', danger = false, onYes, onNo }) {
+  const body = openModal({ title, html: `<div class="sheet">${html}</div><div class="actions"><button class="btn btn-sm" style="--c:var(--panel-deep)" data-no>${no}</button><button class="btn ${danger ? 'btn-red' : 'btn-green'}" data-yes autofocus>${yes}</button></div>` });
+  body.querySelector('[data-no]').onclick = () => { closeModal(); onNo && onNo(); };
+  body.querySelector('[data-yes]').onclick = () => { closeModal(); onYes && onYes(); };
+}
+async function copyText(text, area) {
+  try { await navigator.clipboard.writeText(text); toast('복사했어요.', '📋'); }
+  catch (e) { if (area) { area.focus(); area.select(); } toast('자동 복사가 막혀 있어요. 선택된 글자를 Ctrl+C로 복사하세요.', '⌨️'); }
+}
+async function getCap(name) { try { if (window.claude && typeof window.claude.use === 'function') return await window.claude.use(name); } catch (e) {} return null; }
+let capDownloads = null;
+getCap('downloads').then(x => { capDownloads = x; });
+
+/* ================= 로그인 ================= */
+const fails = {};
+function showLoginErr(m) { $('#login-err').textContent = m; }
+$('#login-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const name = $('#login-name').value.trim().replace(/\s+/g, ' ');
+  const pw = $('#login-pw').value.trim();
+  showLoginErr('');
+  if (!name) return showLoginErr('이름을 입력하세요.');
+  if (!/^\d{4}$/.test(pw)) return showLoginErr('비밀번호는 숫자 4자리예요.');
+  const f = fails[name];
+  if (f && f.until > Date.now()) return showLoginErr(`비밀번호를 여러 번 틀렸어요. ${Math.ceil((f.until - Date.now()) / 1000)}초 뒤에 다시 해 보세요.`);
+  const h = await hashPw(name, pw);
+  const ex = students[name];
+  if (!ex) {
+    confirmModal({ title: '처음 왔어요!', yes: '새로 시작', no: '이름 고치기',
+      html: `<p><b>‘${esc(name)}’</b> 이름으로 새 모험을 시작해요.</p><p>방금 입력한 비밀번호 4자리를 꼭 기억하세요. 다음에 들어올 때 필요해요.</p><p class="note">이미 해 본 적이 있다면 이름이 정확한지 확인하세요.</p>`,
+      onYes: () => { students[name] = newUser(name, h); save(); enter(name); toast(`${name} 모험가 등록 완료!`, '🎉'); },
+      onNo: () => $('#login-name').focus() });
+    return;
+  }
+  if (ex.pw == null) { ex.pw = h; save(); enter(name); toast('새 비밀번호를 등록했어요. 잊지 마세요!', '🔑'); return; }
+  if (ex.pw !== h) {
+    const ff = fails[name] || (fails[name] = { n: 0, until: 0 });
+    ff.n++; if (ff.n >= 5) { ff.n = 0; ff.until = Date.now() + 30000; }
+    $('#login-pw').value = ''; $('#login-pw').focus();
+    return showLoginErr('비밀번호가 맞지 않아요. 잊어버렸다면 선생님께 초기화를 부탁하세요.');
+  }
+  delete fails[name];
+  enter(name);
+});
+function enter(name) {
+  user = normalize(students[name]); students[name] = user; save();
+  $('#login-pw').value = ''; showLoginErr('');
+  $('#screen-login').hidden = true; $('#screen-lobby').hidden = false;
+  updateHUD(); switchTab('play'); checkBadges();
+  if (user._refund) { toast(`상점이 뽑기로 바뀌어서, 예전에 산 아바타 값 코인 ${user._refund}개를 돌려받았어요.`, '🪙'); delete user._refund; save(); }
+  if (!storageOK) toast('이 브라우저는 기록 저장이 막혀 있어요. 창을 닫으면 기록이 사라져요.', '⚠️');
+}
+$('#btn-logout').onclick = () => {
+  const go = () => { endRound(); save(); user = null; $('#screen-lobby').hidden = true; $('#screen-login').hidden = false; $('#login-name').value = ''; $('#login-name').focus(); };
+  if (round) confirmModal({ title: '나갈까요?', html: '<p>지금 스테이지는 끝나지만, 이미 푼 문제 기록과 코인은 저장돼 있어요.</p>', yes: '나가기', danger: true, onYes: go });
+  else go();
+};
+function updateHUD(bumpCoins) {
+  $('#hud-name').textContent = user.name;
+  $('#hud-sub').textContent = `뱃지 ${user.badges.length}개 · 푼 문제 ${fmt(user.solved)}개`;
+  $('#hud-avatar').textContent = (ITEM[user.eq] || ITEM.cap).icon;
+  const c = $('#hud-coins'); c.textContent = fmt(user.coins);
+  if (bumpCoins) { const p = c.parentElement; p.classList.remove('bump'); void p.offsetWidth; p.classList.add('bump'); }
+}
+
+/* ================= 탭 ================= */
+let activeTab = 'play';
+$$('.tab').forEach(b => b.addEventListener('click', () => switchTab(b.dataset.tab)));
+function switchTab(t) {
+  activeTab = t;
+  for (const x of ['play', 'shop', 'badges', 'stats']) {
+    $('#tab-' + x).hidden = x !== t;
+    $('#tab-btn-' + x).setAttribute('aria-selected', String(x === t));
+  }
+  if (t === 'play') renderPlay();
+  if (t === 'shop') renderShop();
+  if (t === 'badges') renderBadges();
+  if (t === 'stats') renderStats();
+}
+
+/* ================= 모험: 스테이지 ================= */
+const starsHTML = (n, cls = '') => `<span class="stars ${cls}" aria-label="별 ${n}개">${[0, 1, 2].map(i => `<span class="star ${i < n ? 'on' : ''}">★</span>`).join('')}</span>`;
+function renderPlay() {
+  $('#stage-select').hidden = !!round; $('#round').hidden = !round;
+  if (round) { renderRoundStatic(); return; }
+  $('#stage-grid').innerHTML = MODES.map(m => {
+    const best = user.best[m.id] || 0;
+    return `<button class="card" style="--c:${m.color}" data-mode="${m.id}">
+      ${m.tag ? `<span class="tag ot-sm" style="--tagc:${m.tagc}">${m.tag}</span>` : ''}
+      <span class="card-art ${m.id === 'word' ? 'emoji' : 'ot expr-art'}">${m.art}</span>
+      <span class="card-name ot-sm">${m.name}</span>
+      ${m.meta ? `<span class="card-meta hot">${m.meta}</span>` : ''}
+      ${starsHTML(best)}
+      <span class="btn btn-green btn-sm price">시작</span></button>`;
+  }).join('');
+  $$('#stage-grid [data-mode]').forEach(b => b.onclick = () => startRound(b.dataset.mode));
+}
+let round = null, tick = null, lastTick = 0, pending = [];
+const later = (fn, ms) => { const id = setTimeout(() => { pending = pending.filter(x => x !== id); fn(); }, ms); pending.push(id); };
+function endRound() { round = null; clearInterval(tick); tick = null; pending.forEach(clearTimeout); pending = []; }
+function startRound(mode) {
+  endRound();
+  let list;
+  if (mode === 'word') list = shuffle([...WORD_GENS.keys()]).slice(0, 10).map(makeWord);
+  else {
+    const cats = mode === 'mix' ? shuffle([...CATS, ...CATS].map(c => c.id)).slice(0, 10) : Array(10).fill(mode);
+    const seen = new Set(); list = [];
+    for (const c of cats) { let p, tries = 0; do { p = GEN[c](); tries++; } while (seen.has(p.key) && tries < 50); seen.add(p.key); list.push(p); }
+  }
+  round = { mode, list, idx: 0, results: [], coins: 0, elapsed: 0, totalSec: 0, phase: 'answer' };
+  renderPlay(); loadProblem();
+  tick = setInterval(onTick, 200); lastTick = performance.now();
+}
+function onTick() {
+  const now = performance.now(), dt = now - lastTick; lastTick = now;
+  if (!round || round.phase !== 'answer' || document.hidden || activeTab !== 'play' || modalOpen()) return;
+  round.elapsed += dt;
+  $('#timer').textContent = `⏱ ${Math.floor(round.elapsed / 1000)}초`;
+}
+function renderRoundStatic() {
+  const p = round.list[round.idx];
+  $('#progress').innerHTML = round.list.map((_, i) => `<span class="seg ${i < round.results.length ? (round.results[i] ? 'ok' : 'ng') : i === round.idx ? 'now' : ''}"></span>`).join('');
+  $('#rf-streak').textContent = user.streak;
+  $('#rf-coins').textContent = round.coins;
+  if (!p) return;
+  const cat = CAT[p.cat];
+  const bc = $('#board-cat'); bc.textContent = cat.name; bc.style.setProperty('--catc', cat.color);
+  $('#board-num').textContent = `${round.idx + 1} / ${round.list.length}`;
+  const ex = $('#expr');
+  if (p.word) { ex.className = 'wp'; ex.innerHTML = p.text; }
+  else { ex.className = 'expr'; ex.innerHTML = `${opndHTML(p.a)}<span class="op">${p.op}</span>${opndHTML(p.b)}<span class="op">=</span><span class="q">?</span>`; }
+  const un = $('#answer-unit'); un.hidden = !p.unit; un.textContent = p.unit || '';
+  $('#timer').textContent = `⏱ ${Math.floor(round.elapsed / 1000)}초`;
+}
+function loadProblem() {
+  round.phase = 'answer'; round.elapsed = 0;
+  const inp = $('#answer'); inp.value = ''; inp.disabled = false;
+  inp.setAttribute('inputmode', coarse ? 'none' : 'text');
+  $('#btn-submit').disabled = false; $('#btn-submit').hidden = false;
+  $('#feedback').innerHTML = '';
+  renderRoundStatic();
+  if (!modalOpen()) inp.focus({ preventScroll: true });
+}
+function setFeedback(html) { $('#feedback').innerHTML = html; }
+function submitAnswer() {
+  if (!round || round.phase !== 'answer') return;
+  const inp = $('#answer'), raw = inp.value;
+  const shake = () => { inp.classList.remove('shake'); void inp.offsetWidth; inp.classList.add('shake'); };
+  if (!raw.trim()) { shake(); inp.focus(); return; }
+  const p = round.list[round.idx];
+  const res = checkAnswer(raw, p);
+  if (res === 'invalid') { shake(); setFeedback(`<div class="fb-warn">숫자와 / . 만 써서 입력해요. 대분수는 1 3/4처럼 띄어 써요.</div>`); inp.focus(); return; }
+  if (res === 'reduce') { setFeedback(`<div class="fb-warn">값은 맞았어요! 약분해서 기약분수(또는 자연수)로 다시 써 보세요.</div>`); inp.focus(); return; }
+
+  round.phase = 'feedback';
+  inp.disabled = true; $('#btn-submit').disabled = true;
+  const sec = Math.min(p.word ? 300 : 120, Math.round(round.elapsed / 100) / 10);
+  const ok = res === 'correct';
+  round.totalSec += sec;
+  user.solved++; user.totalSec += sec;
+  user.history.push({ c: p.cat, ok: ok ? 1 : 0, s: sec, t: Date.now() });
+  if (user.history.length > 1000) user.history.splice(0, user.history.length - 1000);
+  if (!user.cats.includes(p.cat)) user.cats.push(p.cat);
+  round.results.push(ok);
+  const last = round.idx === round.list.length - 1;
+  if (ok) {
+    user.correct++; user.streak++; user.maxStreak = Math.max(user.maxStreak, user.streak);
+    const mult = MODE[round.mode]?.mult || 1;
+    const earned = (5 + Math.min(15, Math.floor(user.streak / 3) * 5)) * mult;
+    user.coins += earned; user.earned += earned; round.coins += earned;
+    setFeedback(`<div class="fb-big ot">정답!</div><div class="fb-msg ot-sm">${user.streak >= 3 ? `연속 ${user.streak}번 정답` : '잘했어요'}</div><span class="float-coin ot-sm"><span class="coin"></span>+${earned}${mult > 1 ? ` (×${mult})` : ''}</span>`);
+    save(); updateHUD(true); renderRoundStatic(); checkBadges();
+    later(nextProblem, 1100);
+  } else {
+    user.streak = 0;
+    setFeedback(`<div class="fb-msg ot-sm">아쉬워요. 정답은</div><div class="fb-answer">${ansHTML(p)}</div><button class="btn btn-blue" id="btn-next">${last ? '결과 보기' : '다음 문제'}</button>`);
+    save(); updateHUD(); renderRoundStatic(); checkBadges();
+    $('#btn-submit').hidden = true;
+    const nb = $('#btn-next'); nb.onclick = nextProblem; nb.focus({ preventScroll: true });
+  }
+}
+function nextProblem() {
+  if (!round || round.phase !== 'feedback') return;
+  pending.forEach(clearTimeout); pending = [];
+  round.idx++;
+  if (round.idx >= round.list.length) return finishRound();
+  loadProblem();
+}
+function finishRound() {
+  const r = round, correct = r.results.filter(Boolean).length, total = r.list.length;
+  const stars = correct === total ? 3 : correct >= 8 ? 2 : correct >= 5 ? 1 : 0;
+  let bonus = 0;
+  if (correct === total) { bonus = 20 * (MODE[r.mode]?.mult || 1); user.perfect++; user.coins += bonus; user.earned += bonus; r.coins += bonus; }
+  user.rounds.push({ m: r.mode, c: correct, n: total, s: Math.round(r.totalSec), t: Date.now() });
+  if (user.rounds.length > 60) user.rounds.splice(0, user.rounds.length - 60);
+  user.best[r.mode] = Math.max(user.best[r.mode] || 0, stars);
+  endRound(); save(); updateHUD(true); renderPlay(); checkBadges();
+  const titles = ['조금만 더 힘내요!', '스테이지 클리어!', '스테이지 클리어!', '완벽해요!'];
+  const body = openModal({ title: titles[stars], html: `
+    <div class="result-stars">${[0, 1, 2].map(i => `<span class="star ${i < stars ? 'on' : ''}">★</span>`).join('')}</div>
+    <div class="sheet kv">
+      <span>맞힌 문제</span><b>${correct} / ${total}</b>
+      <span>걸린 시간</span><b>${fmt(Math.round(r.totalSec))}초 (문제당 ${(r.totalSec / total).toFixed(1)}초)</b>
+      <span>얻은 코인</span><b>+${r.coins}${bonus ? ' (완벽 보너스 ${bonus} 포함)' : ''}</b>
+    </div>
+    <div class="actions"><button class="btn btn-sm" style="--c:var(--panel-deep)" data-close>스테이지 고르기</button><button class="btn btn-green" id="btn-again">한 번 더</button></div>` });
+  body.querySelector('#btn-again').onclick = () => { closeModal(); startRound(r.mode); };
+}
+$('#btn-submit').onclick = submitAnswer;
+$('#answer').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); submitAnswer(); } });
+$('#answer').addEventListener('input', () => { const f = $('#feedback .fb-warn'); if (f) $('#feedback').innerHTML = ''; });
+$('#btn-quit').onclick = () => confirmModal({ title: '그만할까요?', html: '<p>지금까지 푼 문제의 기록과 코인은 저장돼요. 이 스테이지의 별은 받지 못해요.</p>', yes: '그만하기', danger: true,
+  onYes: () => { endRound(); renderPlay(); } });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && modalOpen()) { closeModal(); return; }
+  if (e.key === 'Enter' && !modalOpen() && round && round.phase === 'feedback' && activeTab === 'play' && document.activeElement?.id !== 'btn-next' && !document.activeElement?.closest('button')) { e.preventDefault(); nextProblem(); }
+});
+// 핫바 키패드
+const KEYS = [['1', '1'], ['2', '2'], ['3', '3'], ['4', '4'], ['5', '5'], ['6', '6'], ['7', '7'], ['8', '8'], ['9', '9'], ['0', '0'], ['/', '/'], ['.', '.'], [' ', '띄기', 'Space'], ['back', '⌫', 'Bksp']];
+$('#hotbar').innerHTML = KEYS.map(([k, l, hk]) => `<button class="slot key ${l.length > 1 ? 'wide-label' : ''}" data-k="${k === ' ' ? 'sp' : k}" aria-label="${k === 'back' ? '지우기' : k === ' ' ? '띄어쓰기' : l}"><small>${hk || l}</small>${l}</button>`).join('');
+$$('#hotbar .key').forEach(b => b.addEventListener('click', () => {
+  if (!round || round.phase !== 'answer') return;
+  const inp = $('#answer'), k = b.dataset.k;
+  if (k === 'back') inp.value = inp.value.slice(0, -1);
+  else if (inp.value.length < 14) inp.value += k === 'sp' ? ' ' : k;
+  inp.dispatchEvent(new Event('input'));
+  if (!coarse) inp.focus({ preventScroll: true });
+}));
+// 실제 키보드 입력 시 핫바 반짝
+$('#answer').addEventListener('keydown', e => {
+  const map = { ' ': 'sp', Backspace: 'back' }; const k = map[e.key] || e.key;
+  const b = $(`#hotbar [data-k="${CSS.escape(k)}"]`); if (b) { b.classList.add('hit'); setTimeout(() => b.classList.remove('hit'), 120); }
+});
+
+/* ================= 상점 ================= */
+const TIER_ORDER = ['rare', 'epic', 'legend', 'mythic'];
+const pityName = m => m.pity.min === 'mythic' ? '신화' : TIERS[m.pity.min].label + ' 이상';
+const pityJosa = m => m.pity.min === 'mythic' ? '가' : '이';
+function renderShop() {
+  $('#gacha-machines').innerHTML = MACHINES.map(m => {
+    const need = m.price - user.coins, left = m.pity.n - (user.pity[m.id] || 0);
+    const tiers = TIER_ORDER.filter(t => m.odds[t]);
+    return `<div class="card machine" style="--c:${m.c}">
+      <span class="tag ot-sm" style="--tagc:${m.tagc}">${m.sub}</span>
+      <span class="card-art machine-art" aria-hidden="true"><span class="capsule">${m.icon}</span></span>
+      <span class="card-name ot">${m.name}</span>
+      <div class="oddsbar" aria-hidden="true">${tiers.map(t => `<span class="tier-${t}" style="width:${m.odds[t]}%"></span>`).join('')}</div>
+      <div class="odds-legend ot-sm">${tiers.map(t => `${TIERS[t].label} ${m.odds[t]}%`).join(' · ')}</div>
+      <div class="pity ot-sm">${pityName(m)} 확정까지 <b>${left}회</b></div>
+      <button class="btn btn-green price" data-pull="${m.id}" ${need > 0 ? 'style="filter:grayscale(.6)"' : ''}><span class="coin"></span>${fmt(m.price)} 뽑기</button>
+      <div class="need ot-sm">${need > 0 ? `코인 ${fmt(need)}개 더 필요해요 (문제 최대 ${Math.ceil(need / 5)}개)` : '지금 뽑을 수 있어요!'}</div>
+    </div>`;
+  }).join('');
+  $$('#gacha-machines [data-pull]').forEach(b => b.onclick = () => pull(b.dataset.pull));
+  const owned = CHARS.filter(c => user.inv.includes(c.id)).length;
+  $('#dex-count').textContent = `${owned} / ${CHARS.length}종`;
+  $('#shop-grid').innerHTML = [STARTER, ...CHARS].map(it => {
+    const has = user.inv.includes(it.id), on = user.eq === it.id, t = TIERS[it.r];
+    const btn = on ? `<span class="btn btn-sm price" style="--c:var(--panel-deep)" aria-disabled="true">입는 중</span>`
+      : has ? `<button class="btn btn-blue btn-sm price" data-eq="${it.id}">입기</button>`
+      : `<span class="locked ot-sm">뽑기로 얻기</span>`;
+    return `<div class="card ${on ? 'equipped' : ''} ${has && t ? 'glow-' + it.r : ''}" style="--c:${has ? (t ? t.c : 'var(--teal)') : 'var(--panel-deep)'}">
+      ${t ? `<span class="tag ot-sm" style="--tagc:${t.c}">${t.label}</span>` : ''}
+      <span class="card-art emoji" aria-hidden="true"><span class="${has ? '' : 'sil'}">${it.icon}</span></span>
+      <span class="card-name ot-sm">${has ? it.name : '???'}</span>${btn}</div>`;
+  }).join('');
+  $$('#shop-grid [data-eq]').forEach(b => b.onclick = () => { user.eq = b.dataset.eq; save(); updateHUD(); renderShop(); toast(`${ITEM[user.eq].name}(으)로 갈아입었어요.`, ITEM[user.eq].icon); });
+  renderOdds();
+}
+function renderOdds() {
+  $('#odds').innerHTML = MACHINES.map(m => {
+    const tiers = TIER_ORDER.filter(t => m.odds[t]);
+    const rows = tiers.map(t => {
+      const n = CHARS.filter(c => c.r === t).length;
+      return `<tr><td><span class="tdot tier-${t}"></span>${TIERS[t].label}</td><td>${m.odds[t]}%</td><td>${n}종</td><td>${+(m.odds[t] / n).toFixed(2)}%</td></tr>`;
+    }).join('');
+    const hi = tiers.filter(t => TIER_ORDER.indexOf(t) >= TIER_ORDER.indexOf(m.pity.min)), sum = hi.reduce((s, t) => s + m.odds[t], 0);
+    const ratio = hi.length > 1 ? ` (이때 ${hi.map(t => `${TIERS[t].label} ${+(m.odds[t] / sum * 100).toFixed(1)}%`).join(', ')})` : '';
+    return `<h4>${m.name} · 코인 ${fmt(m.price)}</h4>
+      <div class="table-wrap"><table><thead><tr><th>등급</th><th>등급 확률</th><th>캐릭터 수</th><th>캐릭터 1종당 확률</th></tr></thead><tbody>${rows}</tbody></table></div>
+      <p class="note">${m.pity.n}번 연속으로 ${pityName(m)}${pityJosa(m)} 나오지 않으면 ${m.pity.n}번째 뽑기는 ${pityName(m)}${pityJosa(m)} 확정돼요${ratio}.</p>`;
+  }).join('') + `<p class="note" style="margin-top:10px">이미 가진 캐릭터가 나오면 코인을 돌려받아요: ${TIER_ORDER.map(t => `${TIERS[t].label} ${TIERS[t].refund}개`).join(', ')}. 표에 적힌 확률이 실제로 쓰이는 확률이에요.</p>`;
+}
+function roll(m) {
+  const cnt = user.pity[m.id] || 0, minI = TIER_ORDER.indexOf(m.pity.min);
+  const forced = cnt + 1 >= m.pity.n;
+  const odds = Object.entries(m.odds).filter(([t]) => !forced || TIER_ORDER.indexOf(t) >= minI);
+  let x = Math.random() * odds.reduce((s, [, p]) => s + p, 0), tier = odds[odds.length - 1][0];
+  for (const [t, p] of odds) { x -= p; if (x < 0) { tier = t; break; } }
+  user.pity[m.id] = TIER_ORDER.indexOf(tier) >= minI ? 0 : cnt + 1;
+  return { ch: pick(CHARS.filter(c => c.r === tier)), tier, forced };
+}
+let pulling = false;
+function pull(mid) {
+  if (pulling) return;
+  const m = MACHINES.find(x => x.id === mid);
+  if (user.coins < m.price) { toast(`코인이 ${fmt(m.price - user.coins)}개 더 필요해요. 문제를 풀어 모아 봐요!`, '🪙'); return; }
+  pulling = true;
+  user.coins -= m.price;
+  const { ch, tier, forced } = roll(m);
+  const dupe = user.inv.includes(ch.id), refund = dupe ? TIERS[tier].refund : 0;
+  if (dupe) user.coins += refund; else user.inv.push(ch.id);
+  user.pulls++;
+  save(); updateHUD(true); renderShop();
+  const t = TIERS[tier];
+  let revealed = false;
+  const body = openModal({ title: m.name,
+    html: `<div class="reveal"><span class="capsule shaking" aria-hidden="true">${m.icon}</span><p class="ot-sm" style="margin:0;font-size:1.2rem">두근두근…</p></div>`,
+    onClose: () => { pulling = false; if (!revealed) toast(`${t.label} ${ch.name}${dupe ? ' (중복)' : ' 획득!'}`, ch.icon); renderShop(); checkBadges(); } });
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  setTimeout(() => {
+    if (!body.isConnected) return;
+    revealed = true;
+    body.innerHTML = `<div class="reveal show tier-${tier}" style="--tc:${t.c}">
+        <div class="rays" aria-hidden="true"></div>
+        <div class="tier-label ot">${t.label}${forced ? ' 확정!' : ''}</div>
+        <div class="big-ico" aria-hidden="true">${ch.icon}</div>
+        <div class="rv-name ot">${ch.name}</div>
+        ${dupe ? `<p class="ot-sm rv-note">이미 가진 캐릭터예요. 코인 ${refund}개를 돌려받았어요.</p>` : '<p class="new-badge ot-sm">NEW! 도감에 추가됐어요</p>'}
+      </div>
+      <div class="actions">
+        ${dupe ? '' : '<button class="btn btn-blue" id="rv-wear">바로 입기</button>'}
+        <button class="btn btn-green" id="rv-again" ${user.coins < m.price ? 'disabled' : ''}>한 번 더 · ${fmt(m.price)}</button>
+      </div>`;
+    const w = body.querySelector('#rv-wear');
+    if (w) w.onclick = () => { user.eq = ch.id; save(); updateHUD(); closeModal(); toast(`${ch.name}(으)로 갈아입었어요.`, ch.icon); };
+    body.querySelector('#rv-again').onclick = () => { closeModal(); pull(m.id); };
+    (w || body.querySelector('#rv-again')).focus();
+  }, reduce ? 0 : 1600);
+}
+
+/* ================= 뱃지 ================= */
+function renderBadges() {
+  $('#badge-count').textContent = `${BADGES.length}개 중 ${user.badges.length}개 모았어요`;
+  $('#badge-grid').innerHTML = BADGES.map(b => {
+    const got = user.badges.includes(b.id), [c, m] = b.p(user), pct = Math.min(100, Math.round(c / m * 100));
+    return `<div class="badge ${got ? '' : 'locked'}"><div class="badge-ico" aria-hidden="true">${b.icon}</div><div style="flex:1;min-width:0">
+      <h3>${b.name}</h3><p>${b.desc}</p>
+      ${got ? '<span class="got">✔ 획득</span>' : `<div class="prog" aria-label="진행 ${pct}%"><i style="width:${pct}%"></i></div><p>${fmt(Math.min(c, m))} / ${fmt(m)}${b.done ? ' · 조건을 모두 채우면 받아요' : ''}</p>`}
+    </div></div>`;
+  }).join('');
+}
+
+/* ================= 기록 ================= */
+function catStats(h) {
+  const s = {}; for (const c of STAT_CATS) s[c.id] = { n: 0, ok: 0 };
+  for (const x of h) if (s[x.c]) { s[x.c].n++; s[x.c].ok += x.ok; }
+  return s;
+}
+function weakest(u) {
+  const s = catStats(u.history); let w = null;
+  for (const c of STAT_CATS) { const x = s[c.id]; if (x.n >= 5) { const a = x.ok / x.n; if (!w || a < w.a) w = { id: c.id, a, n: x.n }; } }
+  return w;
+}
+function renderStats() {
+  const u = user;
+  $('#st-solved').textContent = fmt(u.solved);
+  $('#st-acc').textContent = u.solved ? Math.round(acc(u) * 100) + '%' : '-';
+  $('#st-time').textContent = u.solved ? avgSec(u).toFixed(1) + '초' : '-';
+  const s = catStats(u.history);
+  $('#cat-bars').innerHTML = STAT_CATS.map(c => {
+    const x = s[c.id], a = x.n ? Math.round(x.ok / x.n * 100) : 0;
+    return `<div class="catrow" style="--catc:${c.color}"><span>${c.name}</span><span class="track"><i style="width:${x.n ? a : 0}%"></i></span><span class="pct">${x.n ? a + '%' : '-'}<small>${x.n}문제</small></span></div>`;
+  }).join('');
+  const rs = u.rounds.slice(-10);
+  $('#round-chart').innerHTML = rs.length
+    ? `<div class="chart">${rs.map(r => `<div class="bar ${r.c === r.n ? 'perfect' : ''}" title="${MODE[r.m]?.name || ''}"><span>${r.c}</span><i style="height:${Math.max(4, r.c / r.n * 100)}%"></i></div>`).join('')}</div><p class="note" style="margin-top:8px">왼쪽이 오래된 스테이지, 오른쪽이 최근 스테이지예요. 금색은 10문제 모두 맞힌 스테이지예요.</p>`
+    : '<p class="empty">아직 끝낸 스테이지가 없어요. 모험 탭에서 스테이지를 하나 끝내 보세요.</p>';
+  // 분석 (실제 기록으로만 계산)
+  const h = u.history, el = $('#analysis');
+  if (h.length < 10) { el.innerHTML = `<h3>분석</h3><p>지금까지 ${h.length}문제를 풀었어요. 10문제를 넘기면 최근 기록과 예전 기록을 비교해 드려요.</p>`; return; }
+  const n = Math.min(20, Math.floor(h.length / 2));
+  const rec = h.slice(-n), prev = h.slice(-2 * n, -n);
+  const a1 = Math.round(rec.reduce((t, x) => t + x.ok, 0) / n * 100), a0 = Math.round(prev.reduce((t, x) => t + x.ok, 0) / n * 100);
+  const t1 = rec.reduce((t, x) => t + x.s, 0) / n, t0 = prev.reduce((t, x) => t + x.s, 0) / n;
+  const da = a1 - a0, dt = t1 - t0;
+  const lines = [];
+  lines.push(`최근 ${n}문제 정답률은 <b>${a1}%</b>로, 그 전 ${n}문제(${a0}%)보다 ${da > 0 ? `<b>${da}%p 올랐어요</b>.` : da < 0 ? `${-da}%p 내려갔어요.` : '같아요.'}`);
+  lines.push(`문제당 평균 시간은 <b>${t1.toFixed(1)}초</b>로, 그 전(${t0.toFixed(1)}초)보다 ${Math.abs(dt) < .5 ? '비슷해요.' : dt < 0 ? `${(-dt).toFixed(1)}초 빨라졌어요.` : `${dt.toFixed(1)}초 늘었어요.`}`);
+  if (da <= -10 && dt < -1) lines.push('빨라진 만큼 실수가 늘었어요. 제출하기 전에 한 번 더 확인해 봐요.');
+  const w = weakest(u);
+  let weakBtn = '';
+  if (w && w.a < .8) { lines.push(`‘${CAT[w.id].name}’ 정답률이 ${Math.round(w.a * 100)}%로 가장 낮아요. 이 단원을 더 연습해 보세요.`); weakBtn = `<button class="btn btn-orange btn-sm" id="btn-weak" style="margin-top:6px">${CAT[w.id].name} 연습하기</button>`; }
+  else if (w) lines.push('5문제 이상 푼 단원은 모두 정답률 80% 이상이에요. ‘섞어서 도전’으로 실력을 확인해 보세요.');
+  el.innerHTML = `<h3>분석</h3>${lines.map(l => `<p>${l}</p>`).join('')}${weakBtn}`;
+  if (weakBtn) $('#btn-weak').onclick = () => { switchTab('play'); startRound(w.id); };
+}
+const encodeCode = u => 'BWM2-' + btoa(unescape(encodeURIComponent(JSON.stringify({ ...u, history: u.history.slice(-300) }))));
+function decodeCode(s) {
+  s = s.trim().replace(/\s+/g, '');
+  if (!s.startsWith('BWM2-')) return null;
+  try { const o = JSON.parse(decodeURIComponent(escape(atob(s.slice(5))))); if (!o || typeof o.name !== 'string' || !o.name || o.v !== 2) return null; return normalize(o); } catch (e) { return null; }
+}
+$('#btn-export').onclick = () => {
+  const code = encodeCode(user);
+  const body = openModal({ title: '이어 하기 코드', html: `<div class="sheet"><p>아래 코드를 복사해서 다른 기기의 첫 화면 ‘다른 기기 기록 가져오기’에 붙여 넣으세요. 로그인은 지금과 같은 이름과 비밀번호로 해요.</p><textarea class="codebox" readonly>${esc(code)}</textarea></div><div class="actions"><button class="btn btn-green" id="btn-copy">코드 복사</button></div>` });
+  body.querySelector('#btn-copy').onclick = () => copyText(code, body.querySelector('textarea'));
+};
+$('#btn-import').onclick = () => {
+  const body = openModal({ title: '기록 가져오기', html: `<div class="sheet"><p>다른 기기에서 만든 이어 하기 코드를 붙여 넣으세요.</p><textarea class="codebox" id="import-code" placeholder="BWM2-로 시작하는 코드" autofocus></textarea></div><p class="err" id="import-err"></p><div class="actions"><button class="btn btn-green" id="btn-do-import">가져오기</button></div>` });
+  body.querySelector('#btn-do-import').onclick = () => {
+    const u = decodeCode(body.querySelector('#import-code').value);
+    if (!u) { body.querySelector('#import-err').textContent = '코드를 읽을 수 없어요. 처음부터 끝까지 빠짐없이 복사했는지 확인하세요.'; return; }
+    const apply = () => { students[u.name] = u; save(); $('#login-name').value = u.name; toast(`‘${u.name}’ 기록을 가져왔어요. 원래 비밀번호로 들어오세요.`, '📥'); $('#login-pw').focus(); };
+    closeModal();
+    if (students[u.name]) {
+      const ex = students[u.name];
+      confirmModal({ title: '기록을 바꿀까요?', yes: '가져온 기록으로 바꾸기', danger: true,
+        html: `<p>이 기기에 이미 <b>‘${esc(u.name)}’</b> 기록이 있어요.</p><p>이 기기: ${fmt(ex.solved)}문제, 코인 ${fmt(ex.coins)}<br>가져온 코드: ${fmt(u.solved)}문제, 코인 ${fmt(u.coins)}</p>`, onYes: apply });
+    } else apply();
+  };
+};
+
+/* ================= 교사용 메뉴 ================= */
+const tFail = { n: 0, until: 0 };
+$('#btn-teacher').onclick = () => {
+  const t = store.get(TEACHER_KEY);
+  if (!t) {
+    const body = openModal({ title: '교사용 비밀번호 만들기', html: `<div class="sheet"><p>이 기기에서 처음 여는 교사용 메뉴예요. 학생들이 모르는 비밀번호(숫자 4~8자리)를 정해 주세요.</p></div>
+      <div><label class="field-label ot-sm" for="t-new1">새 비밀번호</label><input class="field pw" id="t-new1" type="password" inputmode="numeric" maxlength="8" autofocus></div>
+      <div><label class="field-label ot-sm" for="t-new2">한 번 더</label><input class="field pw" id="t-new2" type="password" inputmode="numeric" maxlength="8"></div>
+      <p class="err" id="t-err"></p><div class="actions"><button class="btn btn-green" id="t-set">저장하고 열기</button></div>` });
+    body.querySelector('#t-set').onclick = async () => {
+      const a = body.querySelector('#t-new1').value.trim(), b = body.querySelector('#t-new2').value.trim(), err = body.querySelector('#t-err');
+      if (!/^\d{4,8}$/.test(a)) { err.textContent = '숫자 4~8자리로 정해 주세요.'; return; }
+      if (a !== b) { err.textContent = '두 비밀번호가 달라요.'; return; }
+      store.set(TEACHER_KEY, { h: await hashPw('#teacher', a) }); teacherPanel();
+    };
+    return;
+  }
+  const body = openModal({ title: '교사용 메뉴', html: `<div><label class="field-label ot-sm" for="t-pw">교사용 비밀번호</label><input class="field pw" id="t-pw" type="password" inputmode="numeric" maxlength="8" autofocus></div><p class="err" id="t-err"></p><div class="actions"><button class="btn btn-blue" id="t-go">열기</button></div>` });
+  const go = async () => {
+    const err = body.querySelector('#t-err');
+    if (tFail.until > Date.now()) { err.textContent = `잠시 잠겼어요. ${Math.ceil((tFail.until - Date.now()) / 1000)}초 뒤에 다시 해 보세요.`; return; }
+    const h = await hashPw('#teacher', body.querySelector('#t-pw').value.trim());
+    if (h !== t.h) { tFail.n++; if (tFail.n >= 5) { tFail.n = 0; tFail.until = Date.now() + 60000; } err.textContent = '비밀번호가 맞지 않아요.'; body.querySelector('#t-pw').value = ''; return; }
+    tFail.n = 0; teacherPanel();
+  };
+  body.querySelector('#t-go').onclick = go;
+  body.querySelector('#t-pw').addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
+};
+const dateStr = t => { const d = new Date(t); return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
+function studentRows() {
+  return Object.values(students).map(normalize).sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+}
+function teacherPanel() {
+  const list = studentRows();
+  const rows = list.map((u, i) => {
+    const w = weakest(u);
+    return `<tr><td><b>${esc(u.name)}</b></td><td>${fmt(u.solved)}</td><td>${u.solved ? Math.round(acc(u) * 100) + '%' : '-'}</td><td>${u.solved ? avgSec(u).toFixed(1) + '초' : '-'}</td><td>${w ? CAT[w.id].name + ` (${Math.round(w.a * 100)}%)` : '-'}</td><td>${fmt(u.coins)}</td><td>${dateStr(u.last)}</td>
+      <td><button class="btn btn-orange" data-reset="${i}">비밀번호 초기화</button> <button class="btn btn-red" data-del="${i}">삭제</button></td></tr>`;
+  }).join('');
+  const examples = WORD_GENS.map((g, i) => { const p = makeWord(i); return `<div class="ex-item"><b>${i + 1}. ${g.title}</b><div class="wp">${p.text}</div><div class="ex-a">정답: ${ansHTML(p)}${p.unit ? ' ' + esc(p.unit) : ''}</div></div>`; }).join('');
+  const body = openModal({ title: '교사용 메뉴', wide: true, html: `
+    <div class="sheet">
+      <h3>이 기기의 학생 기록 (${list.length}명)</h3>
+      ${list.length ? `<div class="table-wrap"><table><thead><tr><th>이름</th><th>푼 문제</th><th>정답률</th><th>평균 시간</th><th>약한 단원</th><th>코인</th><th>최근 접속</th><th>관리</th></tr></thead><tbody>${rows}</tbody></table></div>` : '<p class="empty">아직 이 기기에서 시작한 학생이 없어요.</p>'}
+      <div class="actions" style="margin-top:12px"><button class="btn btn-green btn-sm" id="t-csv" ${list.length ? '' : 'disabled'}>CSV로 저장</button></div>
+      <p class="note" style="margin-top:10px">기록은 이 기기의 브라우저에만 저장돼요. 다른 기기에서 푼 학생은 ‘이어 하기 코드’로 이 기기에 가져오면 함께 보여요. CSV 파일은 구글 시트에서 파일 → 가져오기로 열 수 있어요. 비밀번호를 초기화하면 학생이 다음에 들어올 때 입력한 4자리가 새 비밀번호가 돼요.</p>
+    </div>
+    <div class="sheet"><h3>문장제 문제 유형 (${WORD_GENS.length}가지)</h3><p class="note" style="margin-bottom:10px">‘문장제 문제’ 스테이지에서는 아래 유형 중 10가지가 무작위로 나오고, 숫자는 매번 새로 바뀌어요. 아래는 예시이며 메뉴를 열 때마다 달라져요. 정답은 프로그램이 정확히 계산하고, 대분수·가분수·소수 중 어떤 꼴로 써도 값이 같으면 정답이에요.</p>
+      <div class="ex-list">${examples}</div></div>` });
+  body.querySelectorAll('[data-reset]').forEach(b => b.onclick = () => {
+    const u = list[+b.dataset.reset];
+    confirmModal({ title: '비밀번호 초기화', html: `<p><b>‘${esc(u.name)}’</b> 학생의 비밀번호를 지울까요? 학생이 다음에 들어올 때 입력하는 4자리가 새 비밀번호가 돼요. 기록과 코인은 그대로예요.</p>`, yes: '초기화',
+      onYes: () => { students[u.name].pw = null; save(); toast(`${u.name} 비밀번호를 초기화했어요.`, '🔑'); teacherPanel(); }, onNo: teacherPanel });
+  });
+  body.querySelectorAll('[data-del]').forEach(b => b.onclick = () => {
+    const u = list[+b.dataset.del];
+    confirmModal({ title: '기록 삭제', danger: true, yes: '영구 삭제', html: `<p><b>‘${esc(u.name)}’</b> 학생의 모든 기록, 코인, 아바타, 뱃지를 이 기기에서 지워요. 되돌릴 수 없어요.</p>`,
+      onYes: () => { delete students[u.name]; save(); toast(`${u.name} 기록을 지웠어요.`, '🗑️'); teacherPanel(); }, onNo: teacherPanel });
+  });
+  const csvBtn = body.querySelector('#t-csv');
+  if (csvBtn) csvBtn.onclick = () => exportCSV(list);
+}
+function exportCSV(list) {
+  const q = v => { const s = String(v ?? ''); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+  const head = ['이름', '푼 문제', '맞힌 문제', '정답률(%)', '평균 풀이 시간(초)', '최고 연속 정답', '완벽 스테이지', '보유 코인', '번 코인', '뱃지 수', '약한 단원', ...CATS.map(c => c.name + ' 정답률(%)'), '최근 접속'];
+  const lines = [head.map(q).join(',')];
+  for (const u of list) {
+    const s = catStats(u.history), w = weakest(u), d = new Date(u.last);
+    lines.push([u.name, u.solved, u.correct, u.solved ? Math.round(acc(u) * 100) : '', u.solved ? avgSec(u).toFixed(1) : '', u.maxStreak, u.perfect, u.coins, u.earned, u.badges.length,
+      w ? CAT[w.id].name : '', ...CATS.map(c => s[c.id].n ? Math.round(s[c.id].ok / s[c.id].n * 100) : ''),
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`].map(q).join(','));
+  }
+  const csv = '\uFEFF' + lines.join('\n');
+  const d = new Date(), fname = `수학모험_학생기록_${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}.csv`;
+  const fallback = () => {
+    const body = openModal({ title: 'CSV 복사', wide: true, html: `<div class="sheet"><p>이 화면에서는 파일 저장을 쓸 수 없어요. 아래 내용을 복사해 구글 시트 A1 칸에 붙여 넣은 뒤, 데이터 → 텍스트를 열로 분할을 쓰세요.</p><textarea class="codebox" style="min-height:200px" readonly>${esc(lines.join('\n'))}</textarea></div><div class="actions"><button class="btn btn-green" id="csv-copy">복사</button><button class="btn btn-sm" style="--c:var(--panel-deep)" id="csv-back">교사용 메뉴로</button></div>` });
+    body.querySelector('#csv-copy').onclick = () => copyText(lines.join('\n'), body.querySelector('textarea'));
+    body.querySelector('#csv-back').onclick = teacherPanel;
+  };
+  if (!capDownloads) return fallback();
+  capDownloads.save({ filename: fname, data: csv }).then(() => toast('CSV 파일을 저장했어요.', '📄')).catch(e => {
+    if (e && e.code === 'declined') return;
+    if (e && e.code === 'rate_limited') { toast('잠시 뒤에 다시 눌러 주세요.', '⏳'); return; }
+    fallback();
+  });
+}
+
+/* ================= 시작 ================= */
+store.set('bwm:v2:probe', 1);
+$('#login-name').focus();
+</script>
+</body>
+</html>
