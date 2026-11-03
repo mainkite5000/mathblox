@@ -444,6 +444,7 @@ td .btn{min-height:32px;font-size:.82rem;padding:.2em .6em}
         <div>
           <div class="hud-name ot" id="hud-name"></div>
           <div class="hud-sub ot-sm" id="hud-sub"></div>
+          <div class="hud-sub ot-sm" id="cloud-status" hidden></div>
         </div>
       </div>
       <div class="hud-right">
@@ -811,7 +812,42 @@ function normalize(u) { const b = newUser(u.name, u.pw ?? null); const o = Objec
   return o; }
 let students = store.get(STORE_KEY) || {};
 let user = null;
-function save() { if (user) user.last = Date.now(); store.set(STORE_KEY, students); }
+function save() { if (user) user.last = Date.now(); store.set(STORE_KEY, students); cloudPush(); }
+
+/* ================= 구글 시트 연동 =================
+   ★ 아래 따옴표 안에 Apps Script 웹 앱 주소(https://script.google.com/macros/s/…/exec)를 붙여 넣으면
+     모든 학생의 기록이 구글 시트에 모여요. 비워 두면 각 기기에만 저장돼요. */
+const SHEET_API_URL = 'https://script.google.com/macros/s/AKfycbze9IW9CgFvNjqymZy4wP29EGsssUYWhzTeV0CIXgPT9Y1i6bec6q3cj_sDvWM9R5sbxw/exec';
+const CLOUD = /^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(SHEET_API_URL);
+async function gs(fn, ...args) {
+  const r = await fetch(SHEET_API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ fn, args }) });
+  const d = await r.json();
+  if (!d.ok) throw new Error(d.error || '시트 오류');
+  return d.result;
+}
+const cloudJSON = u => JSON.stringify({ ...u, history: u.history.slice(-300) });
+function cloudHead() { return ['이름', '푼 문제', '맞힌 문제', '정답률(%)', '평균 풀이 시간(초)', '최고 연속 정답', '완벽 스테이지', '보유 코인', '번 코인', '뱃지 수', '모은 캐릭터', '약한 단원', ...STAT_CATS.map(c => c.name + ' 정답률(%)'), '최근 접속']; }
+function cloudRow(u) {
+  const w = weakest(u), s = catStats(u.history);
+  return [u.name, u.solved, u.correct, u.solved ? Math.round(acc(u) * 100) : '', u.solved ? +avgSec(u).toFixed(1) : '', u.maxStreak, u.perfect, u.coins, u.earned, u.badges.length,
+    CHARS.filter(c => u.inv.includes(c.id)).length, w ? CAT[w.id].name : '', ...STAT_CATS.map(c => s[c.id].n ? Math.round(s[c.id].ok / s[c.id].n * 100) : ''), u.last || Date.now()];
+}
+function setCloud(state) {
+  if (!CLOUD) return;
+  const el = $('#cloud-status'); el.hidden = false;
+  el.textContent = { busy: '☁️ 시트에 저장 중…', ok: '☁️ 시트에 저장됨', err: '⚠️ 시트 저장 실패 (이 기기에는 저장됨)' }[state];
+}
+let pushTimer = null;
+function cloudSend(u) {
+  if (!CLOUD || !u) return Promise.resolve();
+  setCloud('busy');
+  return gs('saveStudent', u.name, cloudJSON(u), cloudHead(), cloudRow(u)).then(() => setCloud('ok')).catch(() => setCloud('err'));
+}
+function cloudPush() { if (!CLOUD || !user) return; const u = user; clearTimeout(pushTimer); setCloud('busy'); pushTimer = setTimeout(() => cloudSend(u), 3000); }
+function cloudFlush() { if (!CLOUD || !user) return; clearTimeout(pushTimer); cloudSend(user); }
+function mergeRemote(raw) {
+  try { const r = normalize(JSON.parse(raw)); const l = students[r.name]; if (!l || (r.last || 0) > (l.last || 0)) students[r.name] = r; } catch (e) {}
+}
 
 /* ================= 상점·뱃지 데이터 ================= */
 const TIERS = {
@@ -930,10 +966,29 @@ $('#login-form').addEventListener('submit', async e => {
   const pw = $('#login-pw').value.trim();
   showLoginErr('');
   if (!name) return showLoginErr('이름을 입력하세요.');
+  if (!/^[가-힣a-zA-Z0-9 ]{1,12}$/.test(name)) return showLoginErr('이름은 한글, 영어, 숫자로만 12자까지 써요.');
   if (!/^\d{4}$/.test(pw)) return showLoginErr('비밀번호는 숫자 4자리예요.');
   const f = fails[name];
   if (f && f.until > Date.now()) return showLoginErr(`비밀번호를 여러 번 틀렸어요. ${Math.ceil((f.until - Date.now()) / 1000)}초 뒤에 다시 해 보세요.`);
   const h = await hashPw(name, pw);
+  if (CLOUD) {
+    const btn = $('#login-form button[type=submit]'); btn.disabled = true; showLoginErr('');
+    let res = null;
+    try { res = await gs('getStudent', name, h); }
+    catch (err) { toast('구글 시트에 연결하지 못해 이 기기의 기록으로 들어가요.', '⚠️'); }
+    btn.disabled = false;
+    if (res && res.wrong) {
+      const ff = fails[name] || (fails[name] = { n: 0, until: 0 });
+      ff.n++; if (ff.n >= 5) { ff.n = 0; ff.until = Date.now() + 30000; }
+      $('#login-pw').value = ''; $('#login-pw').focus();
+      return showLoginErr('비밀번호가 맞지 않아요. 잊어버렸다면 선생님께 초기화를 부탁하세요.');
+    }
+    if (res && res.data) {
+      mergeRemote(res.data);
+      if (students[name] && students[name].pw !== h) students[name].pw = res.reset ? null : students[name].pw;
+      store.set(STORE_KEY, students);
+    }
+  }
   const ex = students[name];
   if (!ex) {
     confirmModal({ title: '처음 왔어요!', yes: '새로 시작', no: '이름 고치기',
@@ -942,7 +997,7 @@ $('#login-form').addEventListener('submit', async e => {
       onNo: () => $('#login-name').focus() });
     return;
   }
-  if (ex.pw == null) { ex.pw = h; save(); enter(name); toast('새 비밀번호를 등록했어요. 잊지 마세요!', '🔑'); return; }
+  if (ex.pw == null) { ex.pw = h; save(); enter(name); cloudFlush(); toast('새 비밀번호를 등록했어요. 잊지 마세요!', '🔑'); return; }
   if (ex.pw !== h) {
     const ff = fails[name] || (fails[name] = { n: 0, until: 0 });
     ff.n++; if (ff.n >= 5) { ff.n = 0; ff.until = Date.now() + 30000; }
@@ -961,7 +1016,7 @@ function enter(name) {
   if (!storageOK) toast('이 브라우저는 기록 저장이 막혀 있어요. 창을 닫으면 기록이 사라져요.', '⚠️');
 }
 $('#btn-logout').onclick = () => {
-  const go = () => { endRound(); save(); user = null; $('#screen-lobby').hidden = true; $('#screen-login').hidden = false; $('#login-name').value = ''; $('#login-name').focus(); };
+  const go = () => { endRound(); save(); cloudFlush(); user = null; $('#cloud-status').hidden = true; $('#screen-lobby').hidden = true; $('#screen-login').hidden = false; $('#login-name').value = ''; $('#login-name').focus(); };
   if (round) confirmModal({ title: '나갈까요?', html: '<p>지금 스테이지는 끝나지만, 이미 푼 문제 기록과 코인은 저장돼 있어요.</p>', yes: '나가기', danger: true, onYes: go });
   else go();
 };
@@ -1311,7 +1366,7 @@ $('#btn-import').onclick = () => {
   body.querySelector('#btn-do-import').onclick = () => {
     const u = decodeCode(body.querySelector('#import-code').value);
     if (!u) { body.querySelector('#import-err').textContent = '코드를 읽을 수 없어요. 처음부터 끝까지 빠짐없이 복사했는지 확인하세요.'; return; }
-    const apply = () => { students[u.name] = u; save(); $('#login-name').value = u.name; toast(`‘${u.name}’ 기록을 가져왔어요. 원래 비밀번호로 들어오세요.`, '📥'); $('#login-pw').focus(); };
+    const apply = () => { students[u.name] = u; save(); cloudSend(u); $('#login-name').value = u.name; toast(`‘${u.name}’ 기록을 가져왔어요. 원래 비밀번호로 들어오세요.`, '📥'); $('#login-pw').focus(); };
     closeModal();
     if (students[u.name]) {
       const ex = students[u.name];
@@ -1334,7 +1389,7 @@ $('#btn-teacher').onclick = () => {
       const a = body.querySelector('#t-new1').value.trim(), b = body.querySelector('#t-new2').value.trim(), err = body.querySelector('#t-err');
       if (!/^\d{4,8}$/.test(a)) { err.textContent = '숫자 4~8자리로 정해 주세요.'; return; }
       if (a !== b) { err.textContent = '두 비밀번호가 달라요.'; return; }
-      store.set(TEACHER_KEY, { h: await hashPw('#teacher', a) }); teacherPanel();
+      store.set(TEACHER_KEY, { h: await hashPw('#teacher', a) }); openTeacherPanel();
     };
     return;
   }
@@ -1344,7 +1399,7 @@ $('#btn-teacher').onclick = () => {
     if (tFail.until > Date.now()) { err.textContent = `잠시 잠겼어요. ${Math.ceil((tFail.until - Date.now()) / 1000)}초 뒤에 다시 해 보세요.`; return; }
     const h = await hashPw('#teacher', body.querySelector('#t-pw').value.trim());
     if (h !== t.h) { tFail.n++; if (tFail.n >= 5) { tFail.n = 0; tFail.until = Date.now() + 60000; } err.textContent = '비밀번호가 맞지 않아요.'; body.querySelector('#t-pw').value = ''; return; }
-    tFail.n = 0; teacherPanel();
+    tFail.n = 0; openTeacherPanel();
   };
   body.querySelector('#t-go').onclick = go;
   body.querySelector('#t-pw').addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
@@ -1353,6 +1408,7 @@ const dateStr = t => { const d = new Date(t); return `${d.getMonth() + 1}/${d.ge
 function studentRows() {
   return Object.values(students).map(normalize).sort((a, b) => a.name.localeCompare(b.name, 'ko'));
 }
+function openTeacherPanel() { teacherPanel(); }
 function teacherPanel() {
   const list = studentRows();
   const rows = list.map((u, i) => {
@@ -1366,19 +1422,19 @@ function teacherPanel() {
       <h3>이 기기의 학생 기록 (${list.length}명)</h3>
       ${list.length ? `<div class="table-wrap"><table><thead><tr><th>이름</th><th>푼 문제</th><th>정답률</th><th>평균 시간</th><th>약한 단원</th><th>코인</th><th>최근 접속</th><th>관리</th></tr></thead><tbody>${rows}</tbody></table></div>` : '<p class="empty">아직 이 기기에서 시작한 학생이 없어요.</p>'}
       <div class="actions" style="margin-top:12px"><button class="btn btn-green btn-sm" id="t-csv" ${list.length ? '' : 'disabled'}>CSV로 저장</button></div>
-      <p class="note" style="margin-top:10px">기록은 이 기기의 브라우저에만 저장돼요. 다른 기기에서 푼 학생은 ‘이어 하기 코드’로 이 기기에 가져오면 함께 보여요. CSV 파일은 구글 시트에서 파일 → 가져오기로 열 수 있어요. 비밀번호를 초기화하면 학생이 다음에 들어올 때 입력한 4자리가 새 비밀번호가 돼요.</p>
+      <p class="note" style="margin-top:10px">${CLOUD ? '<b>구글 시트와 연결되어 있어요.</b> 모든 기기·모든 학생의 누적 기록은 구글 시트의 ‘학생 기록’ 탭에서 보세요. 이 표에는 이 기기에서 들어온 학생만 보여요. 시트 연결 중에는 비밀번호 초기화와 삭제를 시트의 ‘수학 모험 관리’ 메뉴에서 하세요. ' : ''}기록은 이 기기의 브라우저에도 저장돼요. 다른 기기에서 푼 학생은 ‘이어 하기 코드’로 이 기기에 가져오면 함께 보여요. CSV 파일은 구글 시트에서 파일 → 가져오기로 열 수 있어요. 비밀번호를 초기화하면 학생이 다음에 들어올 때 입력한 4자리가 새 비밀번호가 돼요.</p>
     </div>
     <div class="sheet"><h3>문장제 문제 유형 (${WORD_GENS.length}가지)</h3><p class="note" style="margin-bottom:10px">‘문장제 문제’ 스테이지에서는 아래 유형 중 10가지가 무작위로 나오고, 숫자는 매번 새로 바뀌어요. 아래는 예시이며 메뉴를 열 때마다 달라져요. 정답은 프로그램이 정확히 계산하고, 대분수·가분수·소수 중 어떤 꼴로 써도 값이 같으면 정답이에요.</p>
       <div class="ex-list">${examples}</div></div>` });
   body.querySelectorAll('[data-reset]').forEach(b => b.onclick = () => {
     const u = list[+b.dataset.reset];
     confirmModal({ title: '비밀번호 초기화', html: `<p><b>‘${esc(u.name)}’</b> 학생의 비밀번호를 지울까요? 학생이 다음에 들어올 때 입력하는 4자리가 새 비밀번호가 돼요. 기록과 코인은 그대로예요.</p>`, yes: '초기화',
-      onYes: () => { students[u.name].pw = null; save(); toast(`${u.name} 비밀번호를 초기화했어요.`, '🔑'); teacherPanel(); }, onNo: teacherPanel });
+      onYes: () => { students[u.name].pw = null; save(); if (CLOUD) toast('시트에서도 초기화해야 해요: 수학 모험 관리 → 비밀번호 초기화', '📋'); toast(`${u.name} 비밀번호를 초기화했어요.`, '🔑'); teacherPanel(); }, onNo: teacherPanel });
   });
   body.querySelectorAll('[data-del]').forEach(b => b.onclick = () => {
     const u = list[+b.dataset.del];
     confirmModal({ title: '기록 삭제', danger: true, yes: '영구 삭제', html: `<p><b>‘${esc(u.name)}’</b> 학생의 모든 기록, 코인, 아바타, 뱃지를 이 기기에서 지워요. 되돌릴 수 없어요.</p>`,
-      onYes: () => { delete students[u.name]; save(); toast(`${u.name} 기록을 지웠어요.`, '🗑️'); teacherPanel(); }, onNo: teacherPanel });
+      onYes: () => { delete students[u.name]; save(); if (CLOUD) toast('이 기기에서만 지웠어요. 시트에서도 지우려면 수학 모험 관리 → 학생 기록 삭제를 쓰세요.', '📋'); toast(`${u.name} 기록을 지웠어요.`, '🗑️'); teacherPanel(); }, onNo: teacherPanel });
   });
   const csvBtn = body.querySelector('#t-csv');
   if (csvBtn) csvBtn.onclick = () => exportCSV(list);
@@ -1400,6 +1456,13 @@ function exportCSV(list) {
     body.querySelector('#csv-copy').onclick = () => copyText(lines.join('\n'), body.querySelector('textarea'));
     body.querySelector('#csv-back').onclick = teacherPanel;
   };
+  if (!capDownloads && !window.claude) {
+    try {
+      const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' })); a.download = fname;
+      document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+      toast('CSV 파일을 저장했어요.', '📄'); return;
+    } catch (e) { return fallback(); }
+  }
   if (!capDownloads) return fallback();
   capDownloads.save({ filename: fname, data: csv }).then(() => toast('CSV 파일을 저장했어요.', '📄')).catch(e => {
     if (e && e.code === 'declined') return;
