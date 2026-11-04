@@ -956,7 +956,7 @@ function save() { if (user) user.last = Date.now(); store.set(STORE_KEY, student
 /* ================= 구글 시트 연동 =================
    ★ 아래 따옴표 안에 Apps Script 웹 앱 주소(https://script.google.com/macros/s/…/exec)를 붙여 넣으면
      모든 학생의 기록이 구글 시트에 모여요. 비워 두면 각 기기에만 저장돼요. */
-const SHEET_API_URL = '';
+const SHEET_API_URL = 'https://script.google.com/macros/s/AKfycbze9IW9CgFvNjqymZy4wP29EGsssUYWhzTeV0CIXgPT9Y1i6bec6q3cj_sDvWM9R5sbxw/exec';
 // 개인 계정 주소(…/macros/s/…/exec)와 학교 계정 주소(…/a/macros/학교도메인/s/…/exec) 모두 받아요
 const CLOUD = /^https:\/\/script\.google\.com\/(a\/macros\/[^\/\s]+|macros)\/s\/[\w-]+\/exec$/.test(SHEET_API_URL.trim());
 async function gs(fn, ...args) {
